@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -26,13 +28,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Move
@@ -64,8 +72,13 @@ fun TrainingSetupScreen(
     allMoves: List<Move>,
     onPresetChange: (TrainingPreset) -> Unit,
     onStart: () -> Unit,
+    onSavePreset: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
+    var showSavePresetDialog by remember { mutableStateOf(false) }
+    var presetName by remember { mutableStateOf("") }
+    var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten
     var rounds by remember(preset.rounds) { mutableStateOf(preset.rounds) }
     var unitsPerRound by remember(preset.unitsPerRound) { mutableStateOf(preset.unitsPerRound) }
     var fixedInterval by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMinMs == null) }
@@ -300,70 +313,43 @@ fun TrainingSetupScreen(
                 color = HaulaufCard
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Select Moves",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                    Text(
+                        text = "Select Moves",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    
+                    // Tabs for categories
+                    TabRow(selectedTabIndex = selectedCategoryTab) {
+                        Tab(
+                            selected = selectedCategoryTab == 0,
+                            onClick = { selectedCategoryTab = 0 },
+                            text = { Text("Alle") }
                         )
-                        Text(
-                            text = "${selectedIds.size} selected",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                        Tab(
+                            selected = selectedCategoryTab == 1,
+                            onClick = { selectedCategoryTab = 1 },
+                            text = { Text("Haue") }
+                        )
+                        Tab(
+                            selected = selectedCategoryTab == 2,
+                            onClick = { selectedCategoryTab = 2 },
+                            text = { Text("Huten") }
                         )
                     }
+                    
                     Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = false,
-                            onClick = {
-                                selectedIds = allMoves.filter { it.category == MoveCategory.HAU }.map { it.id }.toSet()
-                            },
-                            label = { Text("Nur Haue") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedLabelColor = Color.White,
-                                selectedContainerColor = HaulaufGoldDark
-                            )
-                        )
-                        FilterChip(
-                            selected = false,
-                            onClick = {
-                                selectedIds = allMoves.filter { it.category == MoveCategory.HUT }.map { it.id }.toSet()
-                            },
-                            label = { Text("Nur Huten") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedLabelColor = Color.White,
-                                selectedContainerColor = HaulaufGoldDark
-                            )
-                        )
-                        FilterChip(
-                            selected = false,
-                            onClick = { selectedIds = allMoves.map { it.id }.toSet() },
-                            label = { Text("Beides") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedLabelColor = Color.White,
-                                selectedContainerColor = HaulaufGoldDark
-                            )
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
+                    
+                    // Filter moves based on selected tab
                     val movesByCategory = allMoves.groupBy { it.category }
-                    listOf(MoveCategory.HAU, MoveCategory.HUT).forEach { cat ->
-                        movesByCategory[cat]?.let { moves ->
-                            Text(
-                                text = if (cat == MoveCategory.HAU) "Haue" else "Huten",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = HaulaufTextSecondary,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                            moves.forEach { move ->
+                    val movesToShow = when (selectedCategoryTab) {
+                        1 -> movesByCategory[MoveCategory.HAU] ?: emptyList()
+                        2 -> movesByCategory[MoveCategory.HUT] ?: emptyList()
+                        else -> allMoves
+                    }
+                    
+                    movesToShow.forEach { move ->
                                 val selected = move.id in selectedIds
                                 Surface(
                                     modifier = Modifier
@@ -385,21 +371,47 @@ fun TrainingSetupScreen(
                                 Text(
                                     text = move.displayName,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (selected) HaulaufGoldLight else Color.White
+                                    color = if (selected) HaulaufGoldLight else Color.White,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                if (selected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = HaulaufGoldLight,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { showMoveInfoDialog = move },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Info,
+                                            contentDescription = "Move Info",
+                                            tint = HaulaufTextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    if (selected) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            tint = HaulaufGoldLight,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                            Spacer(Modifier.height(8.dp))
-                        }
+                        Spacer(Modifier.height(8.dp))
                     }
+                    
+                    // Selected count at the bottom
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "${selectedIds.size} selected",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HaulaufTextSecondary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End
+                    )
                 }
             }
 
@@ -496,40 +508,114 @@ fun TrainingSetupScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // Start button
-            Button(
-                onClick = onStart,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                contentPadding = PaddingValues(0.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 4.dp
-                )
+            // Start Training and Save Preset buttons side by side
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
+                // Start Training button
+                Button(
+                    onClick = onStart,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large,
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 4.dp
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                                ),
+                                shape = MaterialTheme.shapes.large
                             ),
-                            shape = MaterialTheme.shapes.large
-                        ),
-                    contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Start Training",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = Color.White
+                        )
+                    }
+                }
+
+                // Save Preset button
+                OutlinedButton(
+                    onClick = { showSavePresetDialog = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.White
+                    )
                 ) {
                     Text(
-                        text = "Start Training",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = Color.White
+                        text = "Save Preset",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
         }
     }
-}}
+
+    // Save Preset Dialog
+    if (showSavePresetDialog) {
+        AlertDialog(
+            onDismissRequest = { showSavePresetDialog = false },
+            title = { Text("Save Preset") },
+            text = {
+                Column {
+                    Text("Enter a name for this preset:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = presetName,
+                        onValueChange = { presetName = it },
+                        label = { Text("Preset Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (presetName.isNotBlank()) {
+                            onSavePreset(presetName.trim())
+                            presetName = ""
+                            showSavePresetDialog = false
+                        }
+                    },
+                    enabled = presetName.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showSavePresetDialog = false
+                    presetName = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Move Info Dialog
+    showMoveInfoDialog?.let { move ->
+        MoveInfoDialog(
+            move = move,
+            onDismiss = { showMoveInfoDialog = null }
+        )
+    }
+}

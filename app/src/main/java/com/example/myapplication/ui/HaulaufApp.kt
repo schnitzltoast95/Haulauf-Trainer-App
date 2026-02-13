@@ -17,6 +17,7 @@ fun HaulaufApp(
     val preset by viewModel.preset.collectAsState()
     val moveOverrides by viewModel.moveOverrides.collectAsState()
     val allMoves by viewModel.allMoves.collectAsState()
+    val savedPresets by viewModel.savedPresets.collectAsState()
 
     NavHost(
         navController = navController,
@@ -30,7 +31,8 @@ fun HaulaufApp(
                     viewModel.startQuickstart { navController.navigate("training") }
                 },
                 onConfigureTraining = { navController.navigate("setup") },
-                onOpenSettings = { navController.navigate("settings") }
+                onOpenSettings = { navController.navigate("settings") },
+                onOpenPresets = { navController.navigate("presets") }
             )
         }
         composable("setup") {
@@ -40,6 +42,27 @@ fun HaulaufApp(
                 onPresetChange = viewModel::updatePreset,
                 onStart = {
                     viewModel.savePresetAndStart { navController.navigate("training") }
+                },
+                onSavePreset = { name ->
+                    viewModel.savePreset(name)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("presets") {
+            PresetLibraryScreen(
+                savedPresets = savedPresets,
+                allMoves = allMoves,
+                onStartPreset = { savedPreset ->
+                    viewModel.loadPreset(savedPreset)
+                    viewModel.savePresetAndStart { navController.navigate("training") }
+                },
+                onEditPreset = { savedPreset ->
+                    viewModel.loadPreset(savedPreset)
+                    navController.navigate("setup")
+                },
+                onDeletePreset = { savedPreset ->
+                    viewModel.deletePreset(savedPreset.id)
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -87,6 +110,9 @@ fun HaulaufApp(
                 allMoves = allMoves,
                 moveOverrides = moveOverrides,
                 onSaveOverride = viewModel::saveMoveOverride,
+                onSaveMoveInfo = { moveId, description, imagePath ->
+                    viewModel.saveMoveInfo(moveId, description, imagePath)
+                },
                 onTestMove = viewModel::testMoveAudio,
                 onOpenMoveDetails = { id -> navController.navigate("move_audio/$id") },
                 onBack = { navController.popBackStack() }

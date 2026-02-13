@@ -6,6 +6,8 @@ data class Move(
     val id: String,
     val displayName: String,
     val category: MoveCategory = MoveCategory.HAU,
+    val description: String? = null,
+    val imagePath: String? = null, // Path to image or GIF file
 )
 
 val DEFAULT_MOVES = listOf(

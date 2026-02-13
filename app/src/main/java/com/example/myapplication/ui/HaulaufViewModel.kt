@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.DEFAULT_MOVES
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.data.PreferencesRepository
+import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.TrainingPreset
+import com.example.myapplication.data.Move
 import com.example.myapplication.service.TrainingForegroundService
 import com.example.myapplication.training.TrainingEngine
 import com.example.myapplication.training.TrainingState
@@ -41,12 +43,38 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         emptyMap()
     )
 
-    val allMoves = prefs.customMoves.map { custom ->
-        DEFAULT_MOVES + custom
+    val moveInfo = prefs.moveInfo.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyMap()
+    )
+
+    val allMoves = combine(prefs.customMoves, moveInfo) { custom, infoMap ->
+        val defaultWithInfo = DEFAULT_MOVES.map { move ->
+            val info = infoMap[move.id]
+            move.copy(
+                description = info?.first ?: move.description,
+                imagePath = info?.second ?: move.imagePath
+            )
+        }
+        val customWithInfo = custom.map { move ->
+            val info = infoMap[move.id]
+            move.copy(
+                description = info?.first ?: move.description,
+                imagePath = info?.second ?: move.imagePath
+            )
+        }
+        defaultWithInfo + customWithInfo
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         DEFAULT_MOVES
+    )
+
+    val savedPresets = prefs.savedPresets.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
     )
 
     init {
@@ -144,6 +172,33 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             val move = allMoves.value.find { it.id == moveId } ?: return@launch
             val override = moveOverrides.value[moveId]
             audioManager.playMoveAudio(move, override)
+        }
+    }
+
+    fun savePreset(name: String, presetId: String? = null) {
+        viewModelScope.launch {
+            val savedPreset = SavedPreset(
+                id = presetId ?: java.util.UUID.randomUUID().toString(),
+                name = name,
+                preset = preset.value
+            )
+            prefs.savePreset(savedPreset)
+        }
+    }
+
+    fun deletePreset(presetId: String) {
+        viewModelScope.launch {
+            prefs.deletePreset(presetId)
+        }
+    }
+
+    fun loadPreset(savedPreset: SavedPreset) {
+        preset.value = savedPreset.preset
+    }
+
+    fun saveMoveInfo(moveId: String, description: String?, imagePath: String?) {
+        viewModelScope.launch {
+            prefs.saveMoveInfo(moveId, description, imagePath)
         }
     }
 

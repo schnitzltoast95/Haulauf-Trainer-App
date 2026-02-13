@@ -173,7 +173,7 @@ fun SettingsScreen(
             }
 
             Text(
-                text = "CUSTOM AUDIO",
+                text = "MOVE DETAILS",
                 style = MaterialTheme.typography.labelSmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(top = 8.dp)
@@ -194,12 +194,12 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Customize Move Audio",
+                        text = "Customize Move Details",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = Color.White
                     )
                     Text(
-                        text = "Record your own voice or use custom audio files for each move",
+                        text = "Edit audio, images, and descriptions for each move",
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary
                     )

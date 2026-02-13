@@ -25,9 +25,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -63,14 +66,17 @@ fun MoveAudioListScreen(
     allMoves: List<com.example.myapplication.data.Move>,
     moveOverrides: Map<String, String>,
     onSaveOverride: (String, String?) -> Unit,
+    onSaveMoveInfo: (String, String?, String?) -> Unit,
     onTestMove: (String) -> Unit,
     onOpenMoveDetails: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     var pendingMoveForPicker by remember { mutableStateOf<String?>(null) }
+    var pendingMoveForImagePicker by remember { mutableStateOf<String?>(null) }
+    var editingMoveInfo by remember { mutableStateOf<Move?>(null) }
 
-    val filePicker = rememberLauncherForActivityResult(
+    val audioFilePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         val moveId = pendingMoveForPicker
@@ -80,10 +86,23 @@ fun MoveAudioListScreen(
         }
     }
 
+    val imageFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        val moveId = pendingMoveForImagePicker
+        if (moveId != null) {
+            val move = allMoves.find { it.id == moveId }
+            if (move != null) {
+                onSaveMoveInfo(moveId, move.description, uri?.toString())
+            }
+            pendingMoveForImagePicker = null
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Move Audio") },
+                title = { Text("Move Details") },
                 actions = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -105,7 +124,7 @@ fun MoveAudioListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Customize the audio for each move. You can record your own voice or upload an audio file.",
+                text = "Customize audio, images, and descriptions for each move.",
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(bottom = 4.dp)
@@ -195,19 +214,74 @@ fun MoveAudioListScreen(
                                 IconButton(
                                     onClick = {
                                         pendingMoveForPicker = move.id
-                                        filePicker.launch("audio/*")
+                                        audioFilePicker.launch("audio/*")
                                     }
                                 ) {
                                     Text(
-                                        text = "File",
+                                        text = "Audio",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = HaulaufTextSecondary
                                     )
                                 }
                             }
                         }
+                        
+                        // Description and Image section
+                        if (move.description != null || move.imagePath != null) {
+                            Spacer(Modifier.height(8.dp))
+                            if (move.description != null) {
+                                Text(
+                                    text = "Description: ${move.description}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HaulaufTextSecondary,
+                                    maxLines = 2
+                                )
+                            }
+                            if (move.imagePath != null) {
+                                Text(
+                                    text = "Image: ${move.imagePath}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HaulaufTextSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        
+                        // Edit description and image buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { editingMoveInfo = move },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Edit Info", fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    pendingMoveForImagePicker = move.id
+                                    imageFilePicker.launch("image/*")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Image", fontSize = 12.sp)
+                            }
+                        }
                     }
                 }
+            }
+            
+            // Edit Move Info Dialog
+            editingMoveInfo?.let { move ->
+                MoveInfoEditDialog(
+                    move = move,
+                    onSave = { description, imagePath ->
+                        onSaveMoveInfo(move.id, description, imagePath)
+                        editingMoveInfo = null
+                    },
+                    onDismiss = { editingMoveInfo = null }
+                )
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -353,4 +427,63 @@ fun MoveAudioScreen(
             }
         }
     }
+}
+
+@Composable
+private fun MoveInfoEditDialog(
+    move: Move,
+    onSave: (String?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var description by remember { mutableStateOf(move.description ?: "") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Move Info: ${move.displayName}") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    placeholder = { Text("Enter description for this move") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = HaulaufGoldLight,
+                        unfocusedBorderColor = HaulaufTextSecondary,
+                        cursorColor = HaulaufGoldLight,
+                        focusedLabelColor = HaulaufGoldLight,
+                        unfocusedLabelColor = HaulaufTextSecondary
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Image: ${move.imagePath ?: "None"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HaulaufTextSecondary
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(
+                        description.takeIf { it.isNotBlank() },
+                        move.imagePath // Keep existing image path
+                    )
+                }
+            ) {
+                Text("Save", color = HaulaufGoldLight)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

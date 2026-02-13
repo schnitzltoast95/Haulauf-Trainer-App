@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "haulauf_prefs")
 
@@ -37,14 +39,27 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val customMoves: Flow<List<Move>> = context.dataStore.data.map { prefs ->
+        val moveInfoMap = prefs[MOVE_INFO_KEY]?.mapNotNull { entry ->
+            val parts = entry.split("|")
+            if (parts.size >= 2) {
+                val description = if (parts.size >= 2 && parts[1].isNotEmpty()) parts[1] else null
+                val imagePath = if (parts.size >= 3 && parts[2].isNotEmpty()) parts[2] else null
+                parts[0] to (description to imagePath)
+            } else null
+        }?.toMap() ?: emptyMap()
+
         prefs[CUSTOM_MOVES_KEY]?.mapNotNull { entry ->
             val parts = entry.split("|")
             when {
                 parts.size >= 3 -> {
                     val cat = try { MoveCategory.valueOf(parts[2]) } catch (_: Exception) { MoveCategory.HAU }
-                    Move(parts[0], parts[1], cat)
+                    val info = moveInfoMap[parts[0]]
+                    Move(parts[0], parts[1], cat, info?.first, info?.second)
                 }
-                parts.size == 2 -> Move(parts[0], parts[1], MoveCategory.HAU)
+                parts.size == 2 -> {
+                    val info = moveInfoMap[parts[0]]
+                    Move(parts[0], parts[1], MoveCategory.HAU, info?.first, info?.second)
+                }
                 else -> null
             }
         } ?: emptyList()
@@ -115,6 +130,134 @@ class PreferencesRepository(private val context: Context) {
     suspend fun getLastUsedPreset(): TrainingPreset? = lastUsedPreset.first()
     suspend fun getMoveAudioOverrides(): Map<String, String> = moveAudioOverrides.first()
 
+    val savedPresets: Flow<List<SavedPreset>> = context.dataStore.data.map { prefs ->
+        prefs[SAVED_PRESETS_KEY]?.let { jsonString ->
+            try {
+                val jsonArray = JSONArray(jsonString)
+                (0 until jsonArray.length()).mapNotNull { i ->
+                    val obj = jsonArray.getJSONObject(i)
+                    val presetJson = obj.getJSONObject("preset")
+                    SavedPreset(
+                        id = obj.getString("id"),
+                        name = obj.getString("name"),
+                        preset = TrainingPreset(
+                            rounds = presetJson.getInt("rounds"),
+                            unitsPerRound = presetJson.getInt("unitsPerRound"),
+                            reactionIntervalMs = presetJson.getLong("reactionIntervalMs"),
+                            reactionIntervalMinMs = if (presetJson.has("reactionIntervalMinMs") && !presetJson.isNull("reactionIntervalMinMs")) presetJson.getLong("reactionIntervalMinMs") else null,
+                            reactionIntervalMaxMs = if (presetJson.has("reactionIntervalMaxMs") && !presetJson.isNull("reactionIntervalMaxMs")) presetJson.getLong("reactionIntervalMaxMs") else null,
+                            pauseBetweenRoundsMs = presetJson.getLong("pauseBetweenRoundsMs"),
+                            selectedMoveIds = presetJson.getJSONArray("selectedMoveIds").let { arr ->
+                                (0 until arr.length()).map { arr.getString(it) }.toSet()
+                            },
+                            endBeepEnabled = presetJson.getBoolean("endBeepEnabled"),
+                            metronomeEnabled = presetJson.getBoolean("metronomeEnabled"),
+                            metronomeBeatIntervalMs = presetJson.getLong("metronomeBeatIntervalMs"),
+                            noImmediateRepetition = presetJson.getBoolean("noImmediateRepetition"),
+                            volumeCall = presetJson.getDouble("volumeCall").toFloat(),
+                            volumeBeep = presetJson.getDouble("volumeBeep").toFloat(),
+                            volumeTick = presetJson.getDouble("volumeTick").toFloat(),
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } ?: emptyList()
+    }
+
+    val moveInfo: Flow<Map<String, Pair<String?, String?>>> = context.dataStore.data.map { prefs ->
+        prefs[MOVE_INFO_KEY]?.mapNotNull { entry ->
+            val parts = entry.split("|")
+            if (parts.size >= 2) {
+                val description = if (parts.size >= 2 && parts[1].isNotEmpty()) parts[1] else null
+                val imagePath = if (parts.size >= 3 && parts[2].isNotEmpty()) parts[2] else null
+                parts[0] to (description to imagePath)
+            } else null
+        }?.toMap() ?: emptyMap()
+    }
+
+    suspend fun savePreset(savedPreset: SavedPreset) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[SAVED_PRESETS_KEY]?.let { jsonString ->
+                try {
+                    JSONArray(jsonString)
+                } catch (e: Exception) {
+                    JSONArray()
+                }
+            } ?: JSONArray()
+
+            // Remove existing preset with same ID if exists
+            val newArray = JSONArray()
+            for (i in 0 until current.length()) {
+                val obj = current.getJSONObject(i)
+                if (obj.getString("id") != savedPreset.id) {
+                    newArray.put(obj)
+                }
+            }
+
+            // Add/update preset
+            val presetJson = JSONObject().apply {
+                put("rounds", savedPreset.preset.rounds)
+                put("unitsPerRound", savedPreset.preset.unitsPerRound)
+                put("reactionIntervalMs", savedPreset.preset.reactionIntervalMs)
+                put("reactionIntervalMinMs", savedPreset.preset.reactionIntervalMinMs ?: JSONObject.NULL)
+                put("reactionIntervalMaxMs", savedPreset.preset.reactionIntervalMaxMs ?: JSONObject.NULL)
+                put("pauseBetweenRoundsMs", savedPreset.preset.pauseBetweenRoundsMs)
+                put("selectedMoveIds", JSONArray(savedPreset.preset.selectedMoveIds.toList()))
+                put("endBeepEnabled", savedPreset.preset.endBeepEnabled)
+                put("metronomeEnabled", savedPreset.preset.metronomeEnabled)
+                put("metronomeBeatIntervalMs", savedPreset.preset.metronomeBeatIntervalMs)
+                put("noImmediateRepetition", savedPreset.preset.noImmediateRepetition)
+                put("volumeCall", savedPreset.preset.volumeCall.toDouble())
+                put("volumeBeep", savedPreset.preset.volumeBeep.toDouble())
+                put("volumeTick", savedPreset.preset.volumeTick.toDouble())
+            }
+
+            val savedPresetJson = JSONObject().apply {
+                put("id", savedPreset.id)
+                put("name", savedPreset.name)
+                put("preset", presetJson)
+            }
+            newArray.put(savedPresetJson)
+            prefs[SAVED_PRESETS_KEY] = newArray.toString()
+        }
+    }
+
+    suspend fun deletePreset(presetId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[SAVED_PRESETS_KEY]?.let { jsonString ->
+                try {
+                    JSONArray(jsonString)
+                } catch (e: Exception) {
+                    JSONArray()
+                }
+            } ?: JSONArray()
+
+            val newArray = JSONArray()
+            for (i in 0 until current.length()) {
+                val obj = current.getJSONObject(i)
+                if (obj.getString("id") != presetId) {
+                    newArray.put(obj)
+                }
+            }
+            prefs[SAVED_PRESETS_KEY] = newArray.toString()
+        }
+    }
+
+    suspend fun saveMoveInfo(moveId: String, description: String?, imagePath: String?) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[MOVE_INFO_KEY]?.toMutableSet() ?: mutableSetOf()
+            current.removeAll { it.startsWith("$moveId|") }
+            val entry = "$moveId|${description ?: ""}|${imagePath ?: ""}"
+            current.add(entry)
+            prefs[MOVE_INFO_KEY] = current
+        }
+    }
+
+    suspend fun getSavedPresets(): List<SavedPreset> = savedPresets.first()
+    suspend fun getMoveInfo(): Map<String, Pair<String?, String?>> = moveInfo.first()
+
     companion object {
         private val ROUNDS = intPreferencesKey("rounds")
         private val UNITS_PER_ROUND = intPreferencesKey("units_per_round")
@@ -132,5 +275,7 @@ class PreferencesRepository(private val context: Context) {
         private val VOLUME_TICK = floatPreferencesKey("volume_tick")
         private val STRING_SET_KEY = stringSetPreferencesKey("move_audio_overrides")
         private val CUSTOM_MOVES_KEY = stringSetPreferencesKey("custom_moves")
+        private val SAVED_PRESETS_KEY = stringPreferencesKey("saved_presets")
+        private val MOVE_INFO_KEY = stringSetPreferencesKey("move_info")
     }
 }

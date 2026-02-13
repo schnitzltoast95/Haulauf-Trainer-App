@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ fun HomeScreen(
     onQuickstart: () -> Unit,
     onConfigureTraining: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenPresets: () -> Unit,
 ) {
     val selectedMoveNames = allMoves
         .filter { it.id in preset.selectedMoveIds }
@@ -79,6 +81,8 @@ fun HomeScreen(
                     selectedMoveNames = selectedMoveNames
                 )
                 Spacer(modifier = Modifier.height(20.dp))
+                PresetsButton(onClick = onOpenPresets)
+                Spacer(modifier = Modifier.height(12.dp))
                 ConfigureTrainingButton(onClick = onConfigureTraining)
             }
             Text(
@@ -143,7 +147,6 @@ private fun QuickstartButton(
     onClick: () -> Unit,
     selectedMoveNames: List<String>
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -189,15 +192,6 @@ private fun QuickstartButton(
                     color = Color.White
                 )
             }
-        }
-    }
-        if (selectedMoveNames.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Moves: ${selectedMoveNames.joinToString(", ")}",
-                style = MaterialTheme.typography.bodySmall,
-                color = HaulaufTextSecondary
-            )
         }
     }
 }
@@ -266,6 +260,34 @@ private fun SessionStat(value: String, label: String) {
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = HaulaufTextSecondary
+        )
+    }
+}
+
+@Composable
+private fun PresetsButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = Color.White,
+            containerColor = HaulaufCard
+        ),
+        border = null
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.List,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = Color.White
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = "Training Library",
+            style = MaterialTheme.typography.titleMedium
         )
     }
 }
