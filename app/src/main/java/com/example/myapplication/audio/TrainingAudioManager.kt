@@ -143,6 +143,11 @@ class TrainingAudioManager(
         }
     }
 
+    /** Short beep for countdown (3-2-1 at start and during round pause). */
+    fun playCountdownBeep() {
+        toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+    }
+
     fun playMetronomeTick() {
         if (tickSoundId != 0) {
             soundPool?.play(tickSoundId, volumeTick, volumeTick, 1, 0, 1f)

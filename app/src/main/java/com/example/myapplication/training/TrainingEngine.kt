@@ -17,6 +17,7 @@ class TrainingEngine(
     private val availableMoves: List<Move>,
     private val onPlayMove: suspend (Move) -> Unit,
     private val onPlayEndBeep: () -> Unit,
+    private val onPlayCountdownBeep: () -> Unit,
     private val onPlayMetronomeTick: () -> Unit,
     private val onStopMetronome: () -> Unit,
 ) {
@@ -81,6 +82,7 @@ class TrainingEngine(
                     for (cd in (preset.pauseBetweenRoundsMs / 1000).toInt() downTo 1) {
                         if (!scope.isActive) return@launch
                         _state.value = TrainingState.RoundPause(round, preset.rounds, cd)
+                        if (cd in 1..3) onPlayCountdownBeep()
                         delay(1000)
                     }
                 }
@@ -93,6 +95,7 @@ class TrainingEngine(
     private suspend fun countdown() {
         for (c in 3 downTo 1) {
             _state.value = TrainingState.StartCountdown(c)
+            onPlayCountdownBeep()
             delay(1000)
         }
     }

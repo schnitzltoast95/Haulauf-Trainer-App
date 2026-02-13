@@ -120,6 +120,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.playMoveAudio(move, overridesSnapshot[move.id])
             },
             onPlayEndBeep = { audioManager.playEndBeep() },
+            onPlayCountdownBeep = { audioManager.playCountdownBeep() },
             onPlayMetronomeTick = { audioManager.playMetronomeTick() },
             onStopMetronome = { audioManager.stopAll() }
         )
