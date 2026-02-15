@@ -59,22 +59,27 @@ import com.example.myapplication.ui.theme.HaulaufTextSecondary
 fun SettingsScreen(
     preset: TrainingPreset,
     customMoves: List<com.example.myapplication.data.Move>,
+    ttsSpeechRate: Float,
+    onTtsSpeechRateChange: (Float) -> Unit,
+    uiLanguage: String,
+    onUiLanguageChange: (String) -> Unit,
     onPresetChange: (TrainingPreset) -> Unit,
     onOpenCustomAudio: () -> Unit,
     onAddMove: (String, MoveCategory) -> Unit,
     onRemoveMove: (String) -> Unit,
     onClose: () -> Unit
 ) {
+    val s = LocalStrings.current
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(s.settings) },
                 navigationIcon = {},
                 actions = {
                     IconButton(onClick = onClose) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.close,
                             tint = Color.White
                         )
                     }
@@ -91,7 +96,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "AUDIO",
+                text = s.audio,
                 style = MaterialTheme.typography.labelSmall,
                 color = HaulaufTextSecondary
             )
@@ -99,7 +104,7 @@ fun SettingsScreen(
             // Call volume
             SettingsAudioCard(
                 icon = Icons.Filled.Settings,
-                title = "Call Volume",
+                title = s.callVolume,
                 subtitle = "${(preset.volumeCall * 100).toInt()}%",
                 value = preset.volumeCall,
                 onValueChange = { onPresetChange(preset.copy(volumeCall = it)) }
@@ -108,7 +113,7 @@ fun SettingsScreen(
             // End beep volume + toggle
             SettingsAudioCard(
                 icon = Icons.Filled.Notifications,
-                title = "End-of-Window Beep",
+                title = s.endBeep,
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
                 onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
@@ -122,28 +127,97 @@ fun SettingsScreen(
                 onPresetChange = onPresetChange
             )
 
+            // TTS Speed
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = CardDefaults.shape,
+                color = HaulaufCard
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        text = s.ttsSpeed,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
+                    )
+                    Text(
+                        text = s.ttsSpeedDesc,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HaulaufTextSecondary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Slider(
+                        value = ttsSpeechRate.coerceIn(0.5f, 2f),
+                        onValueChange = { onTtsSpeechRateChange(it) },
+                        valueRange = 0.5f..2f,
+                        steps = 14,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = HaulaufGoldLight,
+                            inactiveTrackColor = Color.DarkGray
+                        )
+                    )
+                    Text(
+                        text = "%.2f".format(ttsSpeechRate),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HaulaufTextSecondary
+                    )
+                }
+            }
+
+            // UI Language
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = CardDefaults.shape,
+                color = HaulaufCard
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        text = s.language,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            onClick = { onUiLanguageChange("de") },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (uiLanguage == "de") HaulaufGoldLight else HaulaufTextSecondary
+                            )
+                        ) { Text(s.languageDe) }
+                        TextButton(
+                            onClick = { onUiLanguageChange("en") },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (uiLanguage == "en") HaulaufGoldLight else HaulaufTextSecondary
+                            )
+                        ) { Text(s.languageEn) }
+                    }
+                }
+            }
+
             Text(
-                text = "TRAINING BEHAVIOR",
+                text = s.trainingBehavior,
                 style = MaterialTheme.typography.labelSmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(top = 8.dp)
             )
 
             BehaviorCard(
-                title = "No Immediate Repetition",
-                description = "Prevents the same move from being called twice in a row",
+                title = s.noImmediateRep,
+                description = s.noImmediateRepDesc,
                 checked = preset.noImmediateRepetition,
                 onCheckedChange = { onPresetChange(preset.copy(noImmediateRepetition = it)) }
             )
 
             Text(
-                text = "MANAGE MOVES",
+                text = s.manageMoves,
                 style = MaterialTheme.typography.labelSmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            SettingsAddMoveCard(onAddMove = onAddMove)
+            SettingsAddMoveCard(onAddMove = onAddMove, strings = s)
 
             customMoves.forEach { move ->
                 Surface(
@@ -166,14 +240,14 @@ fun SettingsScreen(
                         TextButton(
                             onClick = { onRemoveMove(move.id) }
                         ) {
-                            Text("Remove", color = HaulaufGoldLight)
+                            Text(s.remove, color = HaulaufGoldLight)
                         }
                     }
                 }
             }
 
             Text(
-                text = "MOVE DETAILS",
+                text = s.moveDetails,
                 style = MaterialTheme.typography.labelSmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(top = 8.dp)
@@ -194,12 +268,12 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Customize Move Details",
+                        text = s.customizeMoveDetails,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = Color.White
                     )
                     Text(
-                        text = "Edit audio, images, and descriptions for each move",
+                        text = s.customizeMoveDetailsDesc,
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary
                     )
@@ -210,7 +284,10 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsAddMoveCard(onAddMove: (String, MoveCategory) -> Unit) {
+private fun SettingsAddMoveCard(
+    onAddMove: (String, MoveCategory) -> Unit,
+    strings: Strings
+) {
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(MoveCategory.HAU) }
     Surface(
@@ -222,7 +299,7 @@ private fun SettingsAddMoveCard(onAddMove: (String, MoveCategory) -> Unit) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("New move name", color = HaulaufTextSecondary) },
+                label = { Text(strings.newMoveName, color = HaulaufTextSecondary) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -240,19 +317,25 @@ private fun SettingsAddMoveCard(onAddMove: (String, MoveCategory) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Kategorie:", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                Text(strings.category + ":", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
                 TextButton(
                     onClick = { category = MoveCategory.HAU },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = if (category == MoveCategory.HAU) HaulaufGoldLight else HaulaufTextSecondary
                     )
-                ) { Text("Hau") }
+                ) { Text(strings.hau) }
                 TextButton(
                     onClick = { category = MoveCategory.HUT },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = if (category == MoveCategory.HUT) HaulaufGoldLight else HaulaufTextSecondary
                     )
-                ) { Text("Hut") }
+                ) { Text(strings.hut) }
+                TextButton(
+                    onClick = { category = MoveCategory.STICH },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (category == MoveCategory.STICH) HaulaufGoldLight else HaulaufTextSecondary
+                    )
+                ) { Text(strings.stich) }
             }
             Spacer(Modifier.height(8.dp))
             TextButton(
@@ -264,7 +347,7 @@ private fun SettingsAddMoveCard(onAddMove: (String, MoveCategory) -> Unit) {
                     }
                 }
             ) {
-                Text("Add Move", color = HaulaufGoldLight)
+                Text(strings.addMove, color = HaulaufGoldLight)
             }
         }
     }

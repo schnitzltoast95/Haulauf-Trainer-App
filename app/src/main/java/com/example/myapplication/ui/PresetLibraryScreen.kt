@@ -41,14 +41,15 @@ fun PresetLibraryScreen(
     onBack: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf<SavedPreset?>(null) }
+    val s = LocalStrings.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Training Library") },
+                title = { Text(s.trainingLibraryTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
                     }
                 }
             )
@@ -66,12 +67,12 @@ fun PresetLibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "No saved presets",
+                        text = s.noSavedPresets,
                         style = MaterialTheme.typography.titleMedium,
                         color = HaulaufTextSecondary
                     )
                     Text(
-                        text = "Save presets from the Configure Training screen",
+                        text = s.noSavedPresetsHint,
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary
                     )
@@ -99,11 +100,12 @@ fun PresetLibraryScreen(
     }
 
     // Delete confirmation dialog
+    val strings = LocalStrings.current
     showDeleteDialog?.let { preset ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Preset") },
-            text = { Text("Are you sure you want to delete \"${preset.name}\"?") },
+            title = { Text(strings.deletePreset) },
+            text = { Text(strings.deletePresetConfirm.format(preset.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -111,12 +113,12 @@ fun PresetLibraryScreen(
                         showDeleteDialog = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(strings.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -131,6 +133,7 @@ private fun PresetCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val s = LocalStrings.current
     val selectedMoves = allMoves.filter { it.id in preset.preset.selectedMoveIds }
     val durationStr = formatDuration(preset.preset.estimatedDurationSeconds())
 
@@ -164,23 +167,23 @@ private fun PresetCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 PresetStat(
-                    label = "Rounds",
+                    label = s.rounds,
                     value = preset.preset.rounds.toString()
                 )
                 PresetStat(
-                    label = "Calls/Round",
+                    label = s.callsRound,
                     value = preset.preset.unitsPerRound.toString()
                 )
                 PresetStat(
-                    label = "Interval",
+                    label = s.reactionInterval,
                     value = if (preset.preset.reactionIntervalMinMs != null) {
-                        "${preset.preset.reactionIntervalMinMs / 1000}-${preset.preset.reactionIntervalMaxMs!! / 1000}s"
+                        "%.2f-%.2fs".format(preset.preset.reactionIntervalMinMs / 1000f, preset.preset.reactionIntervalMaxMs!! / 1000f)
                     } else {
-                        "${preset.preset.reactionIntervalMs / 1000}s"
+                        "%.2fs".format(preset.preset.reactionIntervalMs / 1000f)
                     }
                 )
                 PresetStat(
-                    label = "Pause",
+                    label = s.pauseBetweenRounds,
                     value = "${preset.preset.pauseBetweenRoundsMs / 1000}s"
                 )
             }
@@ -189,7 +192,7 @@ private fun PresetCard(
 
             // Moves summary
             Text(
-                text = "${selectedMoves.size} moves: ${selectedMoves.take(3).joinToString(", ") { it.displayName }}${if (selectedMoves.size > 3) "..." else ""}",
+                text = "${selectedMoves.size} ${s.moves}: ${selectedMoves.take(3).joinToString(", ") { it.displayName }}${if (selectedMoves.size > 3) "..." else ""}",
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary
             )
@@ -198,7 +201,7 @@ private fun PresetCard(
 
             // Duration
             Text(
-                text = "Duration: ~$durationStr",
+                text = "${s.duration}: ~$durationStr",
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary
             )
@@ -223,7 +226,7 @@ private fun PresetCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Start")
+                    Text(s.start)
                 }
                 OutlinedButton(
                     onClick = onEdit,
@@ -238,7 +241,7 @@ private fun PresetCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit")
+                    Text(s.edit)
                 }
                 OutlinedButton(
                     onClick = onDelete,

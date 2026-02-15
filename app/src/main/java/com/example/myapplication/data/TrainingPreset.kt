@@ -3,7 +3,7 @@ package com.example.myapplication.data
 data class TrainingPreset(
     val rounds: Int = 5,
     val unitsPerRound: Int = 25,
-    val reactionIntervalMs: Long = 6000,
+    val reactionIntervalMs: Long = 1200,
     val reactionIntervalMinMs: Long? = null,
     val reactionIntervalMaxMs: Long? = null,
     val pauseBetweenRoundsMs: Long = 10000,

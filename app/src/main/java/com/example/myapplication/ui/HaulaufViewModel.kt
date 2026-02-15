@@ -77,9 +77,35 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         emptyList()
     )
 
+    val ttsSpeechRate = prefs.ttsSpeechRate.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        1.4f
+    )
+
+    val uiLanguage = prefs.uiLanguage.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        "de"
+    )
+
     init {
         viewModelScope.launch {
             prefs.getLastUsedPreset()?.let { preset.value = it }
+            audioManager.setTtsRate(prefs.getTtsSpeechRate())
+        }
+    }
+
+    fun saveTtsSpeechRate(rate: Float) {
+        viewModelScope.launch {
+            prefs.saveTtsSpeechRate(rate)
+            audioManager.setTtsRate(rate)
+        }
+    }
+
+    fun saveUiLanguage(lang: String) {
+        viewModelScope.launch {
+            prefs.saveUiLanguage(lang)
         }
     }
 

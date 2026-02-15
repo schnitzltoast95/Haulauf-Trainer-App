@@ -63,7 +63,11 @@ fun MoveInfoDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (move.category == MoveCategory.HAU) "Hau" else "Hut",
+                            text = when (move.category) {
+                                MoveCategory.HAU -> "Hau"
+                                MoveCategory.HUT -> "Hut"
+                                MoveCategory.STICH -> "Stich"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = HaulaufGoldLight
                         )

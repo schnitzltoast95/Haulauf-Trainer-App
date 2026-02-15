@@ -20,6 +20,7 @@ class TrainingAudioManager(
     private var volumeTick: Float = 0.25f,
 ) {
     private var tts: TextToSpeech? = null
+    private var ttsSpeechRate: Float = 1.4f
     private var toneGenerator: ToneGenerator? = null
     private var soundPool: SoundPool? = null
     private var tickSoundId = 0
@@ -35,8 +36,14 @@ class TrainingAudioManager(
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.GERMAN
+                tts?.setSpeechRate(ttsSpeechRate)
             }
         }
+    }
+
+    fun setTtsRate(rate: Float) {
+        ttsSpeechRate = rate.coerceIn(0.5f, 2f)
+        tts?.setSpeechRate(ttsSpeechRate)
     }
 
     private fun initToneGenerator() {

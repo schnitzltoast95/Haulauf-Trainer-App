@@ -33,6 +33,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -78,7 +80,7 @@ fun TrainingSetupScreen(
     var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
     var presetName by remember { mutableStateOf("") }
-    var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten
+    var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
     var rounds by remember(preset.rounds) { mutableStateOf(preset.rounds) }
     var unitsPerRound by remember(preset.unitsPerRound) { mutableStateOf(preset.unitsPerRound) }
     var fixedInterval by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMinMs == null) }
@@ -255,18 +257,39 @@ fun TrainingSetupScreen(
 
                     if (fixedInterval) {
                         Text(
-                            text = "Seconds",
+                            text = "Seconds (0.5 – 5, step 0.05)",
                             style = MaterialTheme.typography.bodySmall,
                             color = HaulaufTextSecondary
                         )
                         Spacer(Modifier.height(4.dp))
-                        StepperInline(
-                            value = intervalSec.toInt(),
-                            onChange = { v -> intervalSec = v.coerceAtLeast(1).toFloat() }
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Slider(
+                                value = intervalSec.coerceIn(0.05f, 5f),
+                                onValueChange = { v ->
+                                    intervalSec = (v * 20).toInt() / 20f
+                                },
+                                valueRange = 0.05f..5f,
+                                steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = HaulaufGoldLight,
+                                    inactiveTrackColor = Color.DarkGray
+                                )
+                            )
+                            Text(
+                                text = "%.2fs".format(intervalSec),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = HaulaufGoldLight,
+                                modifier = Modifier.width(48.dp)
+                            )
+                        }
                     } else {
                         Text(
-                            text = "Min / Max (seconds)",
+                            text = "Min / Max (seconds, 0.5 – 5, step 0.05)",
                             style = MaterialTheme.typography.bodySmall,
                             color = HaulaufTextSecondary
                         )
@@ -275,25 +298,40 @@ fun TrainingSetupScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            StepperInline(
-                                value = intervalMinSec.toInt(),
-                                onChange = { v ->
-                                    val n = v.coerceAtLeast(1)
-                                    intervalMinSec = n.toFloat()
-                                    if (intervalMaxSec < intervalMinSec) {
-                                        intervalMaxSec = intervalMinSec
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            StepperInline(
-                                value = intervalMaxSec.toInt(),
-                                onChange = { v ->
-                                    val n = v.coerceAtLeast(intervalMinSec.toInt())
-                                    intervalMaxSec = n.toFloat()
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Slider(
+                                    value = intervalMinSec.coerceIn(0.05f, 5f),
+                                    onValueChange = { v ->
+                                        val n = (v * 20).toInt() / 20f
+                                        intervalMinSec = n
+                                        if (intervalMaxSec < intervalMinSec) intervalMaxSec = intervalMinSec
+                                    },
+                                    valueRange = 0.05f..5f,
+                                    steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = HaulaufGoldLight,
+                                        inactiveTrackColor = Color.DarkGray
+                                    )
+                                )
+                                Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Slider(
+                                    value = intervalMaxSec.coerceIn(0.05f, 5f),
+                                    onValueChange = { v ->
+                                        intervalMaxSec = ((v * 20).toInt() / 20f).coerceAtLeast(intervalMinSec)
+                                    },
+                                    valueRange = 0.05f..5f,
+                                    steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = HaulaufGoldLight,
+                                        inactiveTrackColor = Color.DarkGray
+                                    )
+                                )
+                                Text("%.2fs".format(intervalMaxSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                            }
                         }
                     }
                 }
@@ -337,6 +375,11 @@ fun TrainingSetupScreen(
                             onClick = { selectedCategoryTab = 2 },
                             text = { Text("Huten") }
                         )
+                        Tab(
+                            selected = selectedCategoryTab == 3,
+                            onClick = { selectedCategoryTab = 3 },
+                            text = { Text("Stiche") }
+                        )
                     }
                     
                     Spacer(Modifier.height(12.dp))
@@ -346,6 +389,7 @@ fun TrainingSetupScreen(
                     val movesToShow = when (selectedCategoryTab) {
                         1 -> movesByCategory[MoveCategory.HAU] ?: emptyList()
                         2 -> movesByCategory[MoveCategory.HUT] ?: emptyList()
+                        3 -> movesByCategory[MoveCategory.STICH] ?: emptyList()
                         else -> allMoves
                     }
                     

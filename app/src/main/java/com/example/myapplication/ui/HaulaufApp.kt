@@ -3,6 +3,8 @@ package com.example.myapplication.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,7 +20,14 @@ fun HaulaufApp(
     val moveOverrides by viewModel.moveOverrides.collectAsState()
     val allMoves by viewModel.allMoves.collectAsState()
     val savedPresets by viewModel.savedPresets.collectAsState()
+    val uiLanguage by viewModel.uiLanguage.collectAsState()
+    val ttsSpeechRate by viewModel.ttsSpeechRate.collectAsState()
 
+    val strings = remember(uiLanguage) {
+        if (uiLanguage == "en") StringsEn else StringsDe
+    }
+
+    CompositionLocalProvider(LocalStrings provides strings) {
     NavHost(
         navController = navController,
         startDestination = "home"
@@ -97,6 +106,10 @@ fun HaulaufApp(
             SettingsScreen(
                 preset = preset,
                 customMoves = allMoves.filter { it.id.startsWith("custom_") },
+                ttsSpeechRate = ttsSpeechRate,
+                onTtsSpeechRateChange = viewModel::saveTtsSpeechRate,
+                uiLanguage = uiLanguage,
+                onUiLanguageChange = viewModel::saveUiLanguage,
                 onPresetChange = viewModel::updatePreset,
                 onOpenCustomAudio = { navController.navigate("move_audio_list") },
                 onAddMove = viewModel::addCustomMove,
@@ -118,5 +131,6 @@ fun HaulaufApp(
                 onBack = { navController.popBackStack() }
             )
         }
+    }
     }
 }

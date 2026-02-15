@@ -35,6 +35,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenPresets: () -> Unit,
 ) {
+    val s = LocalStrings.current
     val selectedMoveNames = allMoves
         .filter { it.id in preset.selectedMoveIds }
         .map { it.displayName }
@@ -52,7 +53,7 @@ fun HomeScreen(
         ) {
             Icon(
                 imageVector = Icons.Filled.Settings,
-                contentDescription = "Settings",
+                contentDescription = s.settings,
                 tint = Color.White
             )
         }
@@ -86,7 +87,7 @@ fun HomeScreen(
                 ConfigureTrainingButton(onClick = onConfigureTraining)
             }
             Text(
-                text = "Historical European Martial Arts Training",
+                text = s.historicalSubtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary
             )
@@ -128,7 +129,7 @@ private fun LogoSection() {
     }
     Spacer(modifier = Modifier.height(12.dp))
     Text(
-        text = "Haulauf",
+        text = LocalStrings.current.appName,
         style = MaterialTheme.typography.headlineLarge.copy(
             fontWeight = FontWeight.Bold,
             fontSize = 28.sp
@@ -136,7 +137,7 @@ private fun LogoSection() {
         color = Color.White
     )
     Text(
-        text = "Trainer",
+        text = LocalStrings.current.trainer,
         style = MaterialTheme.typography.titleMedium,
         color = HaulaufGoldLight
     )
@@ -185,7 +186,7 @@ private fun QuickstartButton(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Quickstart",
+                    text = LocalStrings.current.quickstart,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -215,7 +216,7 @@ private fun CurrentSessionCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Current Session",
+                    text = LocalStrings.current.currentSession,
                     style = MaterialTheme.typography.bodyMedium,
                     color = HaulaufTextSecondary
                 )
@@ -230,14 +231,14 @@ private fun CurrentSessionCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                SessionStat(value = preset.rounds.toString(), label = "Rounds")
-                SessionStat(value = preset.unitsPerRound.toString(), label = "Calls/Round")
-                SessionStat(value = preset.selectedMoveIds.size.toString(), label = "Moves")
+                SessionStat(value = preset.rounds.toString(), label = LocalStrings.current.rounds)
+                SessionStat(value = preset.unitsPerRound.toString(), label = LocalStrings.current.callsRound)
+                SessionStat(value = preset.selectedMoveIds.size.toString(), label = LocalStrings.current.moves)
             }
             if (selectedMoveNames.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Moves: ${selectedMoveNames.joinToString(", ")}",
+                    text = "${LocalStrings.current.moves}: ${selectedMoveNames.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
                     color = HaulaufTextSecondary
                 )
@@ -286,7 +287,7 @@ private fun PresetsButton(onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Training Library",
+            text = LocalStrings.current.trainingLibrary,
             style = MaterialTheme.typography.titleMedium
         )
     }
@@ -314,7 +315,7 @@ private fun ConfigureTrainingButton(onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Configure Training",
+            text = LocalStrings.current.configureTraining,
             style = MaterialTheme.typography.titleMedium
         )
     }
