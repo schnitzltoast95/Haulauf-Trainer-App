@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 class TrainingEngine(
     private val scope: CoroutineScope,
@@ -93,7 +94,8 @@ class TrainingEngine(
     }
 
     private suspend fun countdown() {
-        for (c in 3 downTo 1) {
+        val startCountdownSec = (preset.initialCountdownMs / 1000).toInt().coerceIn(1, 30)
+        for (c in startCountdownSec downTo 1) {
             _state.value = TrainingState.StartCountdown(c)
             onPlayCountdownBeep()
             delay(1000)
@@ -106,7 +108,18 @@ class TrainingEngine(
         } else {
             moves
         }
-        return filtered.random()
+        val weightedMoves = filtered.map { move ->
+            move to (preset.movePriorities[move.id] ?: 1).coerceAtLeast(1)
+        }
+        val totalWeight = weightedMoves.sumOf { it.second }
+        if (totalWeight <= 0) return filtered.random()
+
+        var roll = Random.nextInt(totalWeight)
+        for ((move, weight) in weightedMoves) {
+            if (roll < weight) return move
+            roll -= weight
+        }
+        return filtered.last()
     }
 
     private fun getWindowMs(): Long =

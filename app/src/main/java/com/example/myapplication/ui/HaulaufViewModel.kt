@@ -183,7 +183,8 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             prefs.removeCustomMove(moveId)
             prefs.saveMoveAudioOverride(moveId, null)
             preset.value = preset.value.copy(
-                selectedMoveIds = preset.value.selectedMoveIds - moveId
+                selectedMoveIds = preset.value.selectedMoveIds - moveId,
+                movePriorities = preset.value.movePriorities - moveId
             )
             prefs.saveLastUsedPreset(preset.value)
         }

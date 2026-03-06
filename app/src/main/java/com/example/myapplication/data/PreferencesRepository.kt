@@ -31,6 +31,8 @@ class PreferencesRepository(private val context: Context) {
                 metronomeEnabled = prefs[METRONOME_ENABLED] ?: false,
                 metronomeBeatIntervalMs = prefs[METRONOME_INTERVAL_MS] ?: 500L,
                 noImmediateRepetition = prefs[NO_IMMEDIATE_REP] ?: false,
+                initialCountdownMs = prefs[INITIAL_COUNTDOWN_MS] ?: 5000L,
+                movePriorities = parseMovePriorities(prefs[MOVE_PRIORITIES]),
                 volumeCall = prefs[VOLUME_CALL] ?: 1f,
                 volumeBeep = prefs[VOLUME_BEEP] ?: 0.75f,
                 volumeTick = prefs[VOLUME_TICK] ?: 0.25f,
@@ -93,6 +95,15 @@ class PreferencesRepository(private val context: Context) {
             prefs[METRONOME_ENABLED] = preset.metronomeEnabled
             prefs[METRONOME_INTERVAL_MS] = preset.metronomeBeatIntervalMs
             prefs[NO_IMMEDIATE_REP] = preset.noImmediateRepetition
+            prefs[INITIAL_COUNTDOWN_MS] = preset.initialCountdownMs.coerceIn(1000L, 30000L)
+            val priorities = preset.movePriorities
+                .filterKeys { it in preset.selectedMoveIds }
+                .mapValues { (_, priority) -> priority.coerceAtLeast(1) }
+            if (priorities.isNotEmpty()) {
+                prefs[MOVE_PRIORITIES] = priorities.map { (id, priority) -> "$id|$priority" }.toSet()
+            } else {
+                prefs.remove(MOVE_PRIORITIES)
+            }
             prefs[VOLUME_CALL] = preset.volumeCall
             prefs[VOLUME_BEEP] = preset.volumeBeep
             prefs[VOLUME_TICK] = preset.volumeTick
@@ -154,6 +165,19 @@ class PreferencesRepository(private val context: Context) {
                             metronomeEnabled = presetJson.getBoolean("metronomeEnabled"),
                             metronomeBeatIntervalMs = presetJson.getLong("metronomeBeatIntervalMs"),
                             noImmediateRepetition = presetJson.getBoolean("noImmediateRepetition"),
+                            initialCountdownMs = if (presetJson.has("initialCountdownMs") && !presetJson.isNull("initialCountdownMs")) presetJson.getLong("initialCountdownMs") else 5000L,
+                            movePriorities = if (presetJson.has("movePriorities") && !presetJson.isNull("movePriorities")) {
+                                val prioritiesJson = presetJson.getJSONObject("movePriorities")
+                                val parsed = mutableMapOf<String, Int>()
+                                val keys = prioritiesJson.keys()
+                                while (keys.hasNext()) {
+                                    val key = keys.next()
+                                    parsed[key] = prioritiesJson.optInt(key, 1).coerceAtLeast(1)
+                                }
+                                parsed
+                            } else {
+                                emptyMap()
+                            },
                             volumeCall = presetJson.getDouble("volumeCall").toFloat(),
                             volumeBeep = presetJson.getDouble("volumeBeep").toFloat(),
                             volumeTick = presetJson.getDouble("volumeTick").toFloat(),
@@ -217,6 +241,14 @@ class PreferencesRepository(private val context: Context) {
                 put("metronomeEnabled", savedPreset.preset.metronomeEnabled)
                 put("metronomeBeatIntervalMs", savedPreset.preset.metronomeBeatIntervalMs)
                 put("noImmediateRepetition", savedPreset.preset.noImmediateRepetition)
+                put("initialCountdownMs", savedPreset.preset.initialCountdownMs.coerceIn(1000L, 30000L))
+                put("movePriorities", JSONObject().apply {
+                    savedPreset.preset.movePriorities
+                        .filterKeys { it in savedPreset.preset.selectedMoveIds }
+                        .forEach { (id, priority) ->
+                            put(id, priority.coerceAtLeast(1))
+                        }
+                })
                 put("volumeCall", savedPreset.preset.volumeCall.toDouble())
                 put("volumeBeep", savedPreset.preset.volumeBeep.toDouble())
                 put("volumeTick", savedPreset.preset.volumeTick.toDouble())
@@ -293,6 +325,8 @@ class PreferencesRepository(private val context: Context) {
         private val METRONOME_ENABLED = booleanPreferencesKey("metronome_enabled")
         private val METRONOME_INTERVAL_MS = longPreferencesKey("metronome_interval_ms")
         private val NO_IMMEDIATE_REP = booleanPreferencesKey("no_immediate_rep")
+        private val INITIAL_COUNTDOWN_MS = longPreferencesKey("initial_countdown_ms")
+        private val MOVE_PRIORITIES = stringSetPreferencesKey("move_priorities")
         private val VOLUME_CALL = floatPreferencesKey("volume_call")
         private val VOLUME_BEEP = floatPreferencesKey("volume_beep")
         private val VOLUME_TICK = floatPreferencesKey("volume_tick")
@@ -302,5 +336,15 @@ class PreferencesRepository(private val context: Context) {
         private val MOVE_INFO_KEY = stringSetPreferencesKey("move_info")
         private val TTS_SPEECH_RATE_KEY = floatPreferencesKey("tts_speech_rate")
         private val UI_LANGUAGE_KEY = stringPreferencesKey("ui_language")
+    }
+
+    private fun parseMovePriorities(entries: Set<String>?): Map<String, Int> {
+        return entries?.mapNotNull { entry ->
+            val parts = entry.split("|")
+            if (parts.size != 2) return@mapNotNull null
+            val moveId = parts[0].trim()
+            val priority = parts[1].toIntOrNull()?.coerceAtLeast(1) ?: return@mapNotNull null
+            moveId to priority
+        }?.toMap() ?: emptyMap()
     }
 }

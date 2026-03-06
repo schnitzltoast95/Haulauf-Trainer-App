@@ -89,11 +89,13 @@ fun TrainingSetupScreen(
     var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
     var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableStateOf(preset.pauseBetweenRoundsMs / 1000f) }
     var selectedIds by remember(preset.selectedMoveIds) { mutableStateOf(preset.selectedMoveIds) }
+    var movePriorities by remember(preset.movePriorities) { mutableStateOf(preset.movePriorities) }
     var showAdvanced by remember { mutableStateOf(false) }
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
     var metronomeInterval by remember(preset.metronomeBeatIntervalMs) { mutableStateOf(preset.metronomeBeatIntervalMs / 1000f) }
     var noRep by remember(preset.noImmediateRepetition) { mutableStateOf(preset.noImmediateRepetition) }
+    var initialCountdownSec by remember(preset.initialCountdownMs) { mutableStateOf((preset.initialCountdownMs / 1000).toInt()) }
 
     LaunchedEffect(
         rounds,
@@ -104,10 +106,12 @@ fun TrainingSetupScreen(
         intervalMaxSec,
         pauseSec,
         selectedIds,
+        movePriorities,
         endBeep,
         metronome,
         metronomeInterval,
-        noRep
+        noRep,
+        initialCountdownSec
     ) {
         onPresetChange(
             TrainingPreset(
@@ -118,10 +122,14 @@ fun TrainingSetupScreen(
                 reactionIntervalMaxMs = if (!fixedInterval) (intervalMaxSec * 1000).toLong() else null,
                 pauseBetweenRoundsMs = (pauseSec * 1000).toLong(),
                 selectedMoveIds = selectedIds,
+                movePriorities = movePriorities
+                    .filterKeys { it in selectedIds }
+                    .mapValues { (_, priority) -> priority.coerceAtLeast(1) },
                 endBeepEnabled = endBeep,
                 metronomeEnabled = metronome,
                 metronomeBeatIntervalMs = (metronomeInterval * 1000).toLong(),
                 noImmediateRepetition = noRep,
+                initialCountdownMs = (initialCountdownSec.coerceIn(1, 30) * 1000L),
                 volumeCall = preset.volumeCall,
                 volumeBeep = preset.volumeBeep,
                 volumeTick = preset.volumeTick,
@@ -395,13 +403,20 @@ fun TrainingSetupScreen(
                     
                     movesToShow.forEach { move ->
                                 val selected = move.id in selectedIds
+                                val priority = movePriorities[move.id] ?: 1
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
                                         .clip(MaterialTheme.shapes.medium)
                                         .clickable {
-                                            selectedIds = if (selected) selectedIds - move.id else selectedIds + move.id
+                                            if (selected) {
+                                                selectedIds = selectedIds - move.id
+                                                movePriorities = movePriorities - move.id
+                                            } else {
+                                                selectedIds = selectedIds + move.id
+                                                movePriorities = movePriorities + (move.id to 1)
+                                            }
                                         },
                                     color = if (selected) HaulaufGoldDark.copy(alpha = 0.7f) else Color.Transparent
                                 ) {
@@ -422,6 +437,39 @@ fun TrainingSetupScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    if (selected) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "Prio",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = HaulaufTextSecondary
+                                            )
+                                            SmallRoundButton(
+                                                onClick = {
+                                                    val newPriority = (priority - 1).coerceAtLeast(1)
+                                                    movePriorities = movePriorities + (move.id to newPriority)
+                                                }
+                                            ) {
+                                                Text("-", color = Color.White)
+                                            }
+                                            Text(
+                                                text = priority.toString(),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = HaulaufGoldLight
+                                            )
+                                            SmallRoundButton(
+                                                onClick = {
+                                                    val newPriority = (priority + 1).coerceAtMost(10)
+                                                    movePriorities = movePriorities + (move.id to newPriority)
+                                                }
+                                            ) {
+                                                Text("+", color = Color.White)
+                                            }
+                                        }
+                                    }
                                     IconButton(
                                         onClick = { showMoveInfoDialog = move },
                                         modifier = Modifier.size(32.dp)
@@ -536,6 +584,17 @@ fun TrainingSetupScreen(
                                 color = HaulaufTextSecondary
                             )
                         }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Initial countdown (sec, 1-30)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HaulaufTextSecondary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        StepperInline(
+                            value = initialCountdownSec.coerceIn(1, 30),
+                            onChange = { v -> initialCountdownSec = v.coerceIn(1, 30) }
+                        )
                     }
                 }
             } else {

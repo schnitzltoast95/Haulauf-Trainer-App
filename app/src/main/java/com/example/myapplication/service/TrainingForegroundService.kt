@@ -30,10 +30,21 @@ class TrainingForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP_SERVICE) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         createNotificationChannel()
         val notification = buildNotification()
         startForeground(NOTIFICATION_ID, notification)
-        return START_STICKY
+        return START_NOT_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // If the app task is explicitly removed from recents, end foreground mode.
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
@@ -41,6 +52,8 @@ class TrainingForegroundService : Service() {
             if (it.isHeld) it.release()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 
@@ -76,6 +89,7 @@ class TrainingForegroundService : Service() {
     }
 
     companion object {
+        const val ACTION_STOP_SERVICE = "com.example.myapplication.action.STOP_TRAINING_SERVICE"
         const val CHANNEL_ID = "training_channel"
         const val NOTIFICATION_ID = 1001
     }

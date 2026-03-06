@@ -12,6 +12,8 @@ data class TrainingPreset(
     val metronomeEnabled: Boolean = false,
     val metronomeBeatIntervalMs: Long = 500,
     val noImmediateRepetition: Boolean = false,
+    val initialCountdownMs: Long = 5000,
+    val movePriorities: Map<String, Int> = emptyMap(),
     val volumeCall: Float = 1f,
     val volumeBeep: Float = 0.75f,
     val volumeTick: Float = 0.25f,
@@ -27,6 +29,6 @@ data class TrainingPreset(
         val callTime = 1500L // approx time for call playback
         val totalCallTime = totalUnits * (avgIntervalMs + callTime)
         val roundPauses = (rounds - 1).coerceAtLeast(0) * pauseBetweenRoundsMs
-        return (totalCallTime + roundPauses) / 1000
+        return (totalCallTime + roundPauses + initialCountdownMs) / 1000
     }
 }
