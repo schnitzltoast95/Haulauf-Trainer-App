@@ -1,6 +1,7 @@
 package com.example.myapplication.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -56,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -379,11 +381,56 @@ fun TrainingSetupScreen(
                 color = HaulaufCard
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = s.selectMoves,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
-                    )
+                    // Filter moves based on selected tab
+                    val movesByCategory = allMoves.groupBy { it.category }
+                    val movesToShow = when (selectedCategoryTab) {
+                        1 -> movesByCategory[MoveCategory.HAU] ?: emptyList()
+                        2 -> movesByCategory[MoveCategory.HUT] ?: emptyList()
+                        3 -> movesByCategory[MoveCategory.STICH] ?: emptyList()
+                        else -> allMoves
+                    }
+                    val visibleMoveIds = movesToShow.map { it.id }.toSet()
+                    val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedIds }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = s.selectMoves,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                        TextButton(
+                            onClick = {
+                                if (allVisibleSelected) {
+                                    selectedIds = selectedIds - visibleMoveIds
+                                    movePriorities = movePriorities - visibleMoveIds
+                                } else {
+                                    if (selectedCategoryTab == 0) {
+                                        val missingIds = visibleMoveIds - selectedIds
+                                        selectedIds = selectedIds + visibleMoveIds
+                                        movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
+                                    } else {
+                                        // In category tabs, "Select all" should result in exactly that tab's moves selected.
+                                        val keptPriorities = movePriorities.filterKeys { it in visibleMoveIds }
+                                        val missingIds = visibleMoveIds - keptPriorities.keys
+                                        selectedIds = visibleMoveIds
+                                        movePriorities = keptPriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
+                                    }
+                                }
+                            },
+                            enabled = movesToShow.isNotEmpty(),
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = if (allVisibleSelected) s.selectNone else s.selectAll,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = HaulaufGoldLight
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
                     
                     // Tabs for categories
@@ -411,15 +458,6 @@ fun TrainingSetupScreen(
                     }
                     
                     Spacer(Modifier.height(12.dp))
-                    
-                    // Filter moves based on selected tab
-                    val movesByCategory = allMoves.groupBy { it.category }
-                    val movesToShow = when (selectedCategoryTab) {
-                        1 -> movesByCategory[MoveCategory.HAU] ?: emptyList()
-                        2 -> movesByCategory[MoveCategory.HUT] ?: emptyList()
-                        3 -> movesByCategory[MoveCategory.STICH] ?: emptyList()
-                        else -> allMoves
-                    }
                     
                     movesToShow.forEach { move ->
                                 val selected = move.id in selectedIds
@@ -505,13 +543,24 @@ fun TrainingSetupScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-                                    if (selected) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = null,
-                                            tint = HaulaufGoldLight,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (selected) HaulaufGoldLight else HaulaufTextSecondary.copy(alpha = 0.5f),
+                                                shape = RectangleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (selected) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Check,
+                                                contentDescription = null,
+                                                tint = HaulaufGoldLight,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }

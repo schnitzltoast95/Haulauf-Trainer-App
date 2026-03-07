@@ -40,6 +40,7 @@ fun HaulaufApp(
                     viewModel.startQuickstart { navController.navigate("training") }
                 },
                 onConfigureTraining = { navController.navigate("setup") },
+                onEditCurrentSession = { navController.navigate("setup") },
                 onOpenSettings = { navController.navigate("settings") },
                 onOpenPresets = { navController.navigate("presets") }
             )

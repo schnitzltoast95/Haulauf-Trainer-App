@@ -3,6 +3,7 @@ package com.example.myapplication.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -32,6 +33,7 @@ fun HomeScreen(
     allMoves: List<Move>,
     onQuickstart: () -> Unit,
     onConfigureTraining: () -> Unit,
+    onEditCurrentSession: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPresets: () -> Unit,
 ) {
@@ -49,7 +51,8 @@ fun HomeScreen(
             onClick = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp)
+                .statusBarsPadding()
+                .padding(top = 8.dp, end = 16.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.Settings,
@@ -79,12 +82,13 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 CurrentSessionCard(
                     preset = preset,
-                    selectedMoveNames = selectedMoveNames
+                    selectedMoveNames = selectedMoveNames,
+                    onClick = onEditCurrentSession
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                PresetsButton(onClick = onOpenPresets)
-                Spacer(modifier = Modifier.height(12.dp))
                 ConfigureTrainingButton(onClick = onConfigureTraining)
+                Spacer(modifier = Modifier.height(12.dp))
+                PresetsButton(onClick = onOpenPresets)
             }
             Text(
                 text = s.historicalSubtitle,
@@ -200,14 +204,16 @@ private fun QuickstartButton(
 @Composable
 private fun CurrentSessionCard(
     preset: TrainingPreset,
-    selectedMoveNames: List<String>
+    selectedMoveNames: List<String>,
+    onClick: () -> Unit
 ) {
     val durationStr = formatDuration(preset.estimatedDurationSeconds())
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = HaulaufCard
+        color = HaulaufCard,
+        onClick = onClick
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
