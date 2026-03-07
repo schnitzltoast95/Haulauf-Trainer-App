@@ -109,7 +109,7 @@ class TrainingEngine(
             moves
         }
         val weightedMoves = filtered.map { move ->
-            move to (preset.movePriorities[move.id] ?: 1).coerceAtLeast(1)
+            move to (preset.movePriorities[move.id] ?: 1).coerceIn(1, 3)
         }
         val totalWeight = weightedMoves.sumOf { it.second }
         if (totalWeight <= 0) return filtered.random()

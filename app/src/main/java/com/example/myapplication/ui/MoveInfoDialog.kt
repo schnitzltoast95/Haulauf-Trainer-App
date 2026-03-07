@@ -33,6 +33,7 @@ fun MoveInfoDialog(
     move: Move,
     onDismiss: () -> Unit
 ) {
+    val s = LocalStrings.current
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
@@ -64,9 +65,9 @@ fun MoveInfoDialog(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = when (move.category) {
-                                MoveCategory.HAU -> "Hau"
-                                MoveCategory.HUT -> "Hut"
-                                MoveCategory.STICH -> "Stich"
+                                MoveCategory.HAU -> s.hau
+                                MoveCategory.HUT -> s.hut
+                                MoveCategory.STICH -> s.stich
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = HaulaufGoldLight
@@ -75,7 +76,7 @@ fun MoveInfoDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.close,
                             tint = Color.White
                         )
                     }
@@ -99,7 +100,7 @@ fun MoveInfoDialog(
                     if (imageModel != null) {
                         AsyncImage(
                             model = imageModel,
-                            contentDescription = "Move: ${move.displayName}",
+                            contentDescription = "${s.moveInfo}: ${move.displayName}",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -125,7 +126,7 @@ fun MoveInfoDialog(
                     )
                 } else {
                     Text(
-                        text = "No description available for this move.",
+                        text = s.noDescription,
                         style = MaterialTheme.typography.bodyMedium,
                         color = HaulaufTextSecondary,
                         modifier = Modifier.fillMaxWidth()
@@ -138,6 +139,7 @@ fun MoveInfoDialog(
 
 @Composable
 private fun MoveInfoImagePlaceholder() {
+    val s = LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -147,7 +149,7 @@ private fun MoveInfoImagePlaceholder() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "No image available",
+            text = s.noImage,
             color = HaulaufTextSecondary,
             style = MaterialTheme.typography.bodySmall
         )

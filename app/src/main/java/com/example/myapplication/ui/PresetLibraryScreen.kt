@@ -1,7 +1,5 @@
 package com.example.myapplication.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,8 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Move
@@ -83,8 +81,8 @@ fun PresetLibraryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(savedPresets) { preset ->
                     PresetCard(
@@ -143,8 +141,7 @@ private fun PresetCard(
         color = HaulaufCard,
         tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header with name
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -155,16 +152,23 @@ private fun PresetCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "~$durationStr",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HaulaufTextSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Summary stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 PresetStat(
                     label = s.rounds,
@@ -175,43 +179,53 @@ private fun PresetCard(
                     value = preset.preset.unitsPerRound.toString()
                 )
                 PresetStat(
-                    label = s.reactionInterval,
-                    value = if (preset.preset.reactionIntervalMinMs != null) {
-                        "%.2f-%.2fs".format(preset.preset.reactionIntervalMinMs / 1000f, preset.preset.reactionIntervalMaxMs!! / 1000f)
-                    } else {
-                        "%.2fs".format(preset.preset.reactionIntervalMs / 1000f)
-                    }
-                )
-                PresetStat(
-                    label = s.pauseBetweenRounds,
-                    value = "${preset.preset.pauseBetweenRoundsMs / 1000}s"
+                    label = s.moves,
+                    value = selectedMoves.size.toString()
                 )
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "${s.moves}: ${selectedMoves.joinToString(", ") { it.displayName }}",
+                style = MaterialTheme.typography.bodySmall,
+                color = HaulaufTextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Moves summary
             Text(
-                text = "${selectedMoves.size} ${s.moves}: ${selectedMoves.take(3).joinToString(", ") { it.displayName }}${if (selectedMoves.size > 3) "..." else ""}",
+                text = "${s.reactionInterval}: ${
+                    if (preset.preset.reactionIntervalMinMs != null) {
+                        "%.2f-%.2fs".format(
+                            preset.preset.reactionIntervalMinMs / 1000f,
+                            preset.preset.reactionIntervalMaxMs!! / 1000f
+                        )
+                    } else {
+                        "%.2fs".format(preset.preset.reactionIntervalMs / 1000f)
+                    }
+                }",
                 style = MaterialTheme.typography.bodySmall,
-                color = HaulaufTextSecondary
+                color = HaulaufTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Duration
             Text(
-                text = "${s.duration}: ~$durationStr",
+                text = "${s.pauseBetweenRounds}: ${preset.preset.pauseBetweenRoundsMs / 1000}s",
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Button(
                     onClick = onStart,
@@ -225,7 +239,7 @@ private fun PresetCard(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(s.start)
                 }
                 OutlinedButton(
@@ -240,11 +254,12 @@ private fun PresetCard(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(s.edit)
                 }
                 OutlinedButton(
                     onClick = onDelete,
+                    modifier = Modifier.width(56.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )

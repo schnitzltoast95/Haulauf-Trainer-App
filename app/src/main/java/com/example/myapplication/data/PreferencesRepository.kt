@@ -14,6 +14,8 @@ import org.json.JSONObject
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "haulauf_prefs")
 
 class PreferencesRepository(private val context: Context) {
+    private val minMovePriority = 1
+    private val maxMovePriority = 3
 
     val lastUsedPreset: Flow<TrainingPreset?> = context.dataStore.data.map { prefs ->
         prefs[ROUNDS]?.let { rounds ->
@@ -98,7 +100,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[INITIAL_COUNTDOWN_MS] = preset.initialCountdownMs.coerceIn(1000L, 30000L)
             val priorities = preset.movePriorities
                 .filterKeys { it in preset.selectedMoveIds }
-                .mapValues { (_, priority) -> priority.coerceAtLeast(1) }
+                .mapValues { (_, priority) -> priority.coerceIn(minMovePriority, maxMovePriority) }
             if (priorities.isNotEmpty()) {
                 prefs[MOVE_PRIORITIES] = priorities.map { (id, priority) -> "$id|$priority" }.toSet()
             } else {
@@ -172,7 +174,8 @@ class PreferencesRepository(private val context: Context) {
                                 val keys = prioritiesJson.keys()
                                 while (keys.hasNext()) {
                                     val key = keys.next()
-                                    parsed[key] = prioritiesJson.optInt(key, 1).coerceAtLeast(1)
+                                    parsed[key] = prioritiesJson.optInt(key, minMovePriority)
+                                        .coerceIn(minMovePriority, maxMovePriority)
                                 }
                                 parsed
                             } else {
@@ -246,7 +249,7 @@ class PreferencesRepository(private val context: Context) {
                     savedPreset.preset.movePriorities
                         .filterKeys { it in savedPreset.preset.selectedMoveIds }
                         .forEach { (id, priority) ->
-                            put(id, priority.coerceAtLeast(1))
+                            put(id, priority.coerceIn(minMovePriority, maxMovePriority))
                         }
                 })
                 put("volumeCall", savedPreset.preset.volumeCall.toDouble())
@@ -343,7 +346,8 @@ class PreferencesRepository(private val context: Context) {
             val parts = entry.split("|")
             if (parts.size != 2) return@mapNotNull null
             val moveId = parts[0].trim()
-            val priority = parts[1].toIntOrNull()?.coerceAtLeast(1) ?: return@mapNotNull null
+            val priority = parts[1].toIntOrNull()
+                ?.coerceIn(minMovePriority, maxMovePriority) ?: return@mapNotNull null
             moveId to priority
         }?.toMap() ?: emptyMap()
     }

@@ -121,7 +121,7 @@ fun SettingsScreen(
                 onToggleEnabled = { onPresetChange(preset.copy(endBeepEnabled = it)) }
             )
 
-            // Metronome toggle + tick volume + beat interval
+            // Metronome global audio only (per-training behavior is configured in Advanced settings)
             SettingsMetronomeCard(
                 preset = preset,
                 onPresetChange = onPresetChange
@@ -195,20 +195,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
-            Text(
-                text = s.trainingBehavior,
-                style = MaterialTheme.typography.labelSmall,
-                color = HaulaufTextSecondary,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            BehaviorCard(
-                title = s.noImmediateRep,
-                description = s.noImmediateRepDesc,
-                checked = preset.noImmediateRepetition,
-                onCheckedChange = { onPresetChange(preset.copy(noImmediateRepetition = it)) }
-            )
 
             Text(
                 text = s.manageMoves,
@@ -358,6 +344,7 @@ private fun SettingsMetronomeCard(
     preset: TrainingPreset,
     onPresetChange: (TrainingPreset) -> Unit
 ) {
+    val s = LocalStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardDefaults.shape,
@@ -367,7 +354,7 @@ private fun SettingsMetronomeCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Start
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -378,26 +365,17 @@ private fun SettingsMetronomeCard(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = "Metronome",
+                        text = s.metronome,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )
                 }
-                Switch(
-                    checked = preset.metronomeEnabled,
-                    onCheckedChange = { onPresetChange(preset.copy(metronomeEnabled = it)) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = HaulaufGoldLight
-                    )
-                )
             }
             Spacer(Modifier.height(12.dp))
-            Text("Tick Volume", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+            Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
             Slider(
                 value = preset.volumeTick.coerceIn(0f, 1f),
                 onValueChange = { onPresetChange(preset.copy(volumeTick = it.coerceIn(0f, 1f))) },
-                enabled = preset.metronomeEnabled,
                 valueRange = 0f..1f,
                 colors = SliderDefaults.colors(
                     thumbColor = Color.White,
@@ -406,21 +384,6 @@ private fun SettingsMetronomeCard(
                 )
             )
             Text("${(preset.volumeTick * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
-            Spacer(Modifier.height(8.dp))
-            Text("Beat Interval", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
-            val intervalSec = (preset.metronomeBeatIntervalMs / 1000f).coerceIn(0.2f, 2f)
-            Slider(
-                value = intervalSec,
-                onValueChange = { onPresetChange(preset.copy(metronomeBeatIntervalMs = (it * 1000).toLong())) },
-                enabled = preset.metronomeEnabled,
-                valueRange = 0.2f..2f,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = HaulaufGoldLight,
-                    inactiveTrackColor = Color.DarkGray
-                )
-            )
-            Text("%.1fs per beat".format(intervalSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
         }
     }
 }
@@ -495,45 +458,4 @@ private fun SettingsAudioCard(
     }
 }
 
-@Composable
-private fun BehaviorCard(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = CardDefaults.shape,
-        color = HaulaufCard
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
-                )
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = HaulaufGoldLight
-                )
-            )
-        }
-    }
-}
 

@@ -71,6 +71,7 @@ fun MoveAudioListScreen(
     onOpenMoveDetails: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val s = LocalStrings.current
     val scrollState = rememberScrollState()
     var pendingMoveForPicker by remember { mutableStateOf<String?>(null) }
     var pendingMoveForImagePicker by remember { mutableStateOf<String?>(null) }
@@ -102,12 +103,12 @@ fun MoveAudioListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Move Details") },
+                title = { Text(s.moveDetailsTitle) },
                 actions = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.close,
                             tint = Color.White
                         )
                     }
@@ -124,7 +125,7 @@ fun MoveAudioListScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Customize audio, images, and descriptions for each move.",
+                text = s.customizeAudioDesc,
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary,
                 modifier = Modifier.padding(bottom = 4.dp)
@@ -153,7 +154,7 @@ fun MoveAudioListScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Custom: $override",
+                                    text = "${s.customAudioPrefix}: $override",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = HaulaufTextSecondary,
                                     maxLines = 1,
@@ -163,7 +164,7 @@ fun MoveAudioListScreen(
                                     onClick = { onSaveOverride(move.id, null) },
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
-                                    Text("Reset")
+                                    Text(s.reset)
                                 }
                             }
                         }
@@ -186,13 +187,13 @@ fun MoveAudioListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Test",
+                                        contentDescription = s.test,
                                         tint = Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
-                                        text = "Test",
+                                        text = s.test,
                                         fontSize = 14.sp,
                                         color = Color.White
                                     )
@@ -206,7 +207,7 @@ fun MoveAudioListScreen(
                                     onClick = { onOpenMoveDetails(move.id) }
                                 ) {
                                     Text(
-                                        text = "Rec",
+                                        text = s.rec,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = HaulaufTextSecondary
                                     )
@@ -218,7 +219,7 @@ fun MoveAudioListScreen(
                                     }
                                 ) {
                                     Text(
-                                        text = "Audio",
+                                        text = s.audioFile,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = HaulaufTextSecondary
                                     )
@@ -231,7 +232,7 @@ fun MoveAudioListScreen(
                             Spacer(Modifier.height(8.dp))
                             if (move.description != null) {
                                 Text(
-                                    text = "Description: ${move.description}",
+                                    text = "${s.descriptionLabel}: ${move.description}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = HaulaufTextSecondary,
                                     maxLines = 2
@@ -239,7 +240,7 @@ fun MoveAudioListScreen(
                             }
                             if (move.imagePath != null) {
                                 Text(
-                                    text = "Image: ${move.imagePath}",
+                                    text = "${s.image}: ${move.imagePath}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = HaulaufTextSecondary,
                                     maxLines = 1
@@ -256,7 +257,7 @@ fun MoveAudioListScreen(
                                 onClick = { editingMoveInfo = move },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Edit Info", fontSize = 12.sp)
+                                Text(s.editInfo, fontSize = 12.sp)
                             }
                             OutlinedButton(
                                 onClick = {
@@ -265,7 +266,7 @@ fun MoveAudioListScreen(
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Image", fontSize = 12.sp)
+                                Text(s.image, fontSize = 12.sp)
                             }
                         }
                     }
@@ -298,6 +299,7 @@ fun MoveAudioScreen(
     onTestMove: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val s = LocalStrings.current
     val move = allMoves.find { it.id == moveId } ?: return
     val context = LocalContext.current
     var isRecording by remember { mutableStateOf(false) }
@@ -340,10 +342,10 @@ fun MoveAudioScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Audio: ${move.displayName}") },
+                title = { Text(s.audioTitleFormat.format(move.displayName)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück", tint = Color.White)
+                        Icon(Icons.Filled.ArrowBack, contentDescription = s.back, tint = Color.White)
                     }
                 }
             )
@@ -356,7 +358,7 @@ fun MoveAudioScreen(
                 .padding(16.dp)
         ) {
             if (overrideUri != null) {
-                Text("Custom audio: $overrideUri", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                Text("${s.customAudioPrefix}: $overrideUri", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
                 Spacer(Modifier.height(8.dp))
             }
             Button(
@@ -365,7 +367,7 @@ fun MoveAudioScreen(
             ) {
                 Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Test abspielen")
+                Text(s.testPlayback)
             }
             Spacer(Modifier.height(8.dp))
             Button(
@@ -409,21 +411,21 @@ fun MoveAudioScreen(
                     containerColor = if (isRecording) Color.Red else Color.DarkGray
                 )
             ) {
-                Text(if (isRecording) "Aufnahme stoppen" else "Neue Aufnahme")
+                Text(if (isRecording) s.stopRecording else s.newRecording)
             }
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = { filePicker.launch("audio/*") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Datei wählen")
+                Text(s.chooseFile)
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { onSaveOverride(moveId, null) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Zurücksetzen auf Standard")
+                Text(s.resetToDefault)
             }
         }
     }
@@ -435,18 +437,19 @@ private fun MoveInfoEditDialog(
     onSave: (String?, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val s = LocalStrings.current
     var description by remember { mutableStateOf(move.description ?: "") }
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Move Info: ${move.displayName}") },
+        title = { Text(s.editMoveInfoTitleFormat.format(move.displayName)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
-                    placeholder = { Text("Enter description for this move") },
+                    label = { Text(s.descriptionFieldLabel) },
+                    placeholder = { Text(s.descriptionPlaceholder) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 5,
@@ -462,7 +465,7 @@ private fun MoveInfoEditDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Image: ${move.imagePath ?: "None"}",
+                    text = "${s.image}: ${move.imagePath ?: s.none}",
                     style = MaterialTheme.typography.bodySmall,
                     color = HaulaufTextSecondary
                 )
@@ -477,13 +480,15 @@ private fun MoveInfoEditDialog(
                     )
                 }
             ) {
-                Text("Save", color = HaulaufGoldLight)
+                Text(s.save, color = HaulaufGoldLight)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(s.cancel)
             }
         }
     )
 }
+
+

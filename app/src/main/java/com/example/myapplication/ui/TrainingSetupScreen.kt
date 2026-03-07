@@ -2,6 +2,8 @@ package com.example.myapplication.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,8 +55,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -62,12 +67,20 @@ import com.example.myapplication.data.Move
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.ui.theme.HaulaufCard
+import com.example.myapplication.ui.theme.HaulaufGold
 import com.example.myapplication.ui.theme.HaulaufGoldDark
 import com.example.myapplication.ui.theme.HaulaufGoldLight
 import com.example.myapplication.ui.theme.HaulaufTextSecondary
 import androidx.compose.foundation.layout.width
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val MIN_MOVE_PRIORITY = 1
+private const val MAX_MOVE_PRIORITY = 3
+
+private fun normalizeMovePriority(priority: Int): Int = priority.coerceIn(MIN_MOVE_PRIORITY, MAX_MOVE_PRIORITY)
+private fun nextMovePriority(priority: Int): Int =
+    if (normalizeMovePriority(priority) >= MAX_MOVE_PRIORITY) MIN_MOVE_PRIORITY else normalizeMovePriority(priority) + 1
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TrainingSetupScreen(
     preset: TrainingPreset,
@@ -77,6 +90,7 @@ fun TrainingSetupScreen(
     onSavePreset: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val s = LocalStrings.current
     var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
     var presetName by remember { mutableStateOf("") }
@@ -89,7 +103,11 @@ fun TrainingSetupScreen(
     var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
     var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableStateOf(preset.pauseBetweenRoundsMs / 1000f) }
     var selectedIds by remember(preset.selectedMoveIds) { mutableStateOf(preset.selectedMoveIds) }
-    var movePriorities by remember(preset.movePriorities) { mutableStateOf(preset.movePriorities) }
+    var movePriorities by remember(preset.movePriorities) {
+        mutableStateOf(
+            preset.movePriorities.mapValues { (_, priority) -> normalizeMovePriority(priority) }
+        )
+    }
     var showAdvanced by remember { mutableStateOf(false) }
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
@@ -124,7 +142,7 @@ fun TrainingSetupScreen(
                 selectedMoveIds = selectedIds,
                 movePriorities = movePriorities
                     .filterKeys { it in selectedIds }
-                    .mapValues { (_, priority) -> priority.coerceAtLeast(1) },
+                    .mapValues { (_, priority) -> normalizeMovePriority(priority) },
                 endBeepEnabled = endBeep,
                 metronomeEnabled = metronome,
                 metronomeBeatIntervalMs = (metronomeInterval * 1000).toLong(),
@@ -145,10 +163,10 @@ fun TrainingSetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configure Training") },
+                title = { Text(s.configureTrainingTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
                     }
                 }
             )
@@ -190,7 +208,7 @@ fun TrainingSetupScreen(
                             }
                             Spacer(Modifier.size(8.dp))
                             Text(
-                                text = "Estimated Duration",
+                                text = s.estimatedDuration,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White
                             )
@@ -204,7 +222,7 @@ fun TrainingSetupScreen(
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "${rounds * unitsPerRound} total calls across $rounds rounds",
+                        text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds),
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary
                     )
@@ -213,14 +231,14 @@ fun TrainingSetupScreen(
 
             // Rounds
             StepperCard(
-                title = "Rounds",
+                title = s.rounds,
                 value = rounds,
                 onChange = { v -> rounds = v.coerceAtLeast(1) }
             )
 
             // Calls per round
             StepperCard(
-                title = "Calls per Round",
+                title = s.callsRound,
                 value = unitsPerRound,
                 onChange = { v -> unitsPerRound = v.coerceAtLeast(1) }
             )
@@ -238,13 +256,13 @@ fun TrainingSetupScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Reaction Interval",
+                            text = s.reactionInterval,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Random",
+                                text = s.random,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HaulaufTextSecondary
                             )
@@ -265,7 +283,7 @@ fun TrainingSetupScreen(
 
                     if (fixedInterval) {
                         Text(
-                            text = "Seconds (0.5 – 5, step 0.05)",
+                            text = s.secondsRange,
                             style = MaterialTheme.typography.bodySmall,
                             color = HaulaufTextSecondary
                         )
@@ -297,7 +315,7 @@ fun TrainingSetupScreen(
                         }
                     } else {
                         Text(
-                            text = "Min / Max (seconds, 0.5 – 5, step 0.05)",
+                            text = s.minMaxSecondsRange,
                             style = MaterialTheme.typography.bodySmall,
                             color = HaulaufTextSecondary
                         )
@@ -347,7 +365,7 @@ fun TrainingSetupScreen(
 
             // Pause between rounds
             StepperCard(
-                title = "Pause Between Rounds (sec)",
+                title = s.pauseBetweenRounds,
                 value = pauseSec.toInt(),
                 onChange = { v -> pauseSec = v.coerceAtLeast(0).toFloat() }
             )
@@ -360,7 +378,7 @@ fun TrainingSetupScreen(
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        text = "Select Moves",
+                        text = s.selectMoves,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )
@@ -371,22 +389,22 @@ fun TrainingSetupScreen(
                         Tab(
                             selected = selectedCategoryTab == 0,
                             onClick = { selectedCategoryTab = 0 },
-                            text = { Text("Alle") }
+                            text = { Text(s.all) }
                         )
                         Tab(
                             selected = selectedCategoryTab == 1,
                             onClick = { selectedCategoryTab = 1 },
-                            text = { Text("Haue") }
+                            text = { Text(s.haue) }
                         )
                         Tab(
                             selected = selectedCategoryTab == 2,
                             onClick = { selectedCategoryTab = 2 },
-                            text = { Text("Huten") }
+                            text = { Text(s.huten) }
                         )
                         Tab(
                             selected = selectedCategoryTab == 3,
                             onClick = { selectedCategoryTab = 3 },
-                            text = { Text("Stiche") }
+                            text = { Text(s.stiche) }
                         )
                     }
                     
@@ -403,22 +421,35 @@ fun TrainingSetupScreen(
                     
                     movesToShow.forEach { move ->
                                 val selected = move.id in selectedIds
-                                val priority = movePriorities[move.id] ?: 1
+                                val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
+                                val increasePriority: () -> Unit = {
+                                    if (!selected) {
+                                        selectedIds = selectedIds + move.id
+                                        movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
+                                    } else {
+                                        val newPriority = nextMovePriority(priority)
+                                        movePriorities = movePriorities + (move.id to newPriority)
+                                    }
+                                }
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
                                         .clip(MaterialTheme.shapes.medium)
-                                        .clickable {
+                                        .combinedClickable(
+                                            onClick = {
                                             if (selected) {
                                                 selectedIds = selectedIds - move.id
                                                 movePriorities = movePriorities - move.id
                                             } else {
                                                 selectedIds = selectedIds + move.id
-                                                movePriorities = movePriorities + (move.id to 1)
+                                                movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
                                             }
                                         },
-                                    color = if (selected) HaulaufGoldDark.copy(alpha = 0.7f) else Color.Transparent
+                                            onDoubleClick = increasePriority,
+                                            onLongClick = increasePriority
+                                        ),
+                                    color = Color.White.copy(alpha = 0.02f)
                                 ) {
                             Row(
                                 modifier = Modifier
@@ -430,7 +461,7 @@ fun TrainingSetupScreen(
                                 Text(
                                     text = move.displayName,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (selected) HaulaufGoldLight else Color.White,
+                                    color = Color.White.copy(alpha = 0.95f),
                                     modifier = Modifier.weight(1f)
                                 )
                                 Row(
@@ -442,31 +473,22 @@ fun TrainingSetupScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Text(
-                                                text = "Prio",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = HaulaufTextSecondary
-                                            )
-                                            SmallRoundButton(
-                                                onClick = {
-                                                    val newPriority = (priority - 1).coerceAtLeast(1)
-                                                    movePriorities = movePriorities + (move.id to newPriority)
-                                                }
-                                            ) {
-                                                Text("-", color = Color.White)
+                                            if (priority > MIN_MOVE_PRIORITY) {
+                                                Text(
+                                                    text = if (priority == 2) s.priorityHigh else s.priorityHighest,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = HaulaufTextSecondary
+                                                )
                                             }
-                                            Text(
-                                                text = priority.toString(),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = HaulaufGoldLight
-                                            )
-                                            SmallRoundButton(
-                                                onClick = {
-                                                    val newPriority = (priority + 1).coerceAtMost(10)
-                                                    movePriorities = movePriorities + (move.id to newPriority)
-                                                }
+                                            IconButton(
+                                                onClick = increasePriority,
+                                                modifier = Modifier.size(32.dp)
                                             ) {
-                                                Text("+", color = Color.White)
+                                                PriorityHeartIcon(
+                                                    priority = priority,
+                                                    contentDescription = s.priority,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
                                             }
                                         }
                                     }
@@ -476,7 +498,7 @@ fun TrainingSetupScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Info,
-                                            contentDescription = "Move Info",
+                                            contentDescription = s.moveInfo,
                                             tint = HaulaufTextSecondary,
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -498,7 +520,7 @@ fun TrainingSetupScreen(
                     // Selected count at the bottom
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "${selectedIds.size} selected",
+                        text = "${selectedIds.size} ${s.selected}",
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary,
                         modifier = Modifier.fillMaxWidth(),
@@ -516,7 +538,7 @@ fun TrainingSetupScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            text = "Advanced Settings",
+                            text = s.advancedSettings,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White
                         )
@@ -532,7 +554,7 @@ fun TrainingSetupScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "No immediate repetition",
+                                text = s.noImmediateRep,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HaulaufTextSecondary
                             )
@@ -549,7 +571,7 @@ fun TrainingSetupScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Metronome",
+                                text = s.metronome,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HaulaufTextSecondary
                             )
@@ -557,7 +579,13 @@ fun TrainingSetupScreen(
                         if (metronome) {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "Metronome interval (sec)",
+                                text = s.beatInterval,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HaulaufTextSecondary
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = s.beatIntervalHint,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HaulaufTextSecondary
                             )
@@ -579,14 +607,14 @@ fun TrainingSetupScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "End-of-window beep",
+                                text = s.endBeep,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HaulaufTextSecondary
                             )
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Initial countdown (sec, 1-30)",
+                            text = "${s.countdown} (${s.seconds}, 1-30)",
                             style = MaterialTheme.typography.bodySmall,
                             color = HaulaufTextSecondary
                         )
@@ -599,7 +627,7 @@ fun TrainingSetupScreen(
                 }
             } else {
                 Text(
-                    text = "Advanced settings",
+                    text = s.advancedSettings,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .clickable { showAdvanced = true }
@@ -642,7 +670,7 @@ fun TrainingSetupScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Start Training",
+                            text = s.startTraining,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold
                             ),
@@ -663,7 +691,7 @@ fun TrainingSetupScreen(
                     )
                 ) {
                     Text(
-                        text = "Save Preset",
+                        text = s.savePreset,
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -675,15 +703,15 @@ fun TrainingSetupScreen(
     if (showSavePresetDialog) {
         AlertDialog(
             onDismissRequest = { showSavePresetDialog = false },
-            title = { Text("Save Preset") },
+            title = { Text(s.savePresetTitle) },
             text = {
                 Column {
-                    Text("Enter a name for this preset:")
+                    Text(s.enterPresetName)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = presetName,
                         onValueChange = { presetName = it },
-                        label = { Text("Preset Name") },
+                        label = { Text(s.presetName) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -700,7 +728,7 @@ fun TrainingSetupScreen(
                     },
                     enabled = presetName.isNotBlank()
                 ) {
-                    Text("Save")
+                    Text(s.save)
                 }
             },
             dismissButton = {
@@ -708,7 +736,7 @@ fun TrainingSetupScreen(
                     showSavePresetDialog = false
                     presetName = ""
                 }) {
-                    Text("Cancel")
+                    Text(s.cancel)
                 }
             }
         )
@@ -722,3 +750,52 @@ fun TrainingSetupScreen(
         )
     }
 }
+
+@Composable
+private fun PriorityHeartIcon(
+    priority: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    when (priority) {
+        1 -> {
+            Icon(
+                imageVector = Icons.Filled.FavoriteBorder,
+                contentDescription = contentDescription,
+                tint = HaulaufTextSecondary,
+                modifier = modifier
+            )
+        }
+        2 -> {
+            Box(modifier = modifier) {
+                Icon(
+                    imageVector = Icons.Filled.FavoriteBorder,
+                    contentDescription = contentDescription,
+                    tint = HaulaufGold,
+                    modifier = Modifier.matchParentSize()
+                )
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = null,
+                    tint = HaulaufGold,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .drawWithContent {
+                            clipRect(right = size.width / 2f) {
+                                this@drawWithContent.drawContent()
+                            }
+                        }
+                )
+            }
+        }
+        else -> {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = contentDescription,
+                tint = HaulaufGold,
+                modifier = modifier
+            )
+        }
+    }
+}
+

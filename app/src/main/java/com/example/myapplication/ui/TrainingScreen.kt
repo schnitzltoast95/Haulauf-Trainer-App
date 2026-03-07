@@ -19,6 +19,7 @@ fun TrainingScreen(
     onResume: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val strings = LocalStrings.current
     val s by state.collectAsState()
     Column(
         modifier = Modifier
@@ -29,7 +30,7 @@ fun TrainingScreen(
     ) {
         when (val st = s) {
             TrainingState.Idle -> {
-                Text("Starte…", style = MaterialTheme.typography.headlineMedium)
+                Text(strings.starting, style = MaterialTheme.typography.headlineMedium)
             }
             is TrainingState.StartCountdown -> {
                 Text(
@@ -47,7 +48,7 @@ fun TrainingScreen(
                         .weight(1f)
                         .wrapContentHeight(Alignment.CenterVertically)
                 )
-                Text("${st.unit}/${st.totalUnits}  ·  Runde ${st.round}/${st.totalRounds}")
+                Text(strings.unitRoundProgressFormat.format(st.unit, st.totalUnits, strings.roundLabel, st.round, st.totalRounds))
                 LinearProgressIndicator(
                     progress = { 0f },
                     modifier = Modifier.fillMaxWidth().height(8.dp)
@@ -62,7 +63,7 @@ fun TrainingScreen(
                         .weight(1f)
                         .wrapContentHeight(Alignment.CenterVertically)
                 )
-                Text("${st.unit}/${st.totalUnits}  ·  Runde ${st.round}/${st.totalRounds}")
+                Text(strings.unitRoundProgressFormat.format(st.unit, st.totalUnits, strings.roundLabel, st.round, st.totalRounds))
                 val progress = if (st.windowMs > 0) (st.elapsedMs.toFloat() / st.windowMs).coerceIn(0f, 1f) else 0f
                 LinearProgressIndicator(
                     progress = { progress },
@@ -71,7 +72,7 @@ fun TrainingScreen(
             }
             is TrainingState.RoundPause -> {
                 Text(
-                    text = "Pause\n${st.countdown}",
+                    text = "${strings.pause}\n${st.countdown}",
                     style = MaterialTheme.typography.headlineLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f).wrapContentHeight(Alignment.CenterVertically)
@@ -79,20 +80,20 @@ fun TrainingScreen(
             }
             is TrainingState.Paused -> {
                 Text(
-                    text = "Pausiert",
+                    text = strings.paused,
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).wrapContentHeight(Alignment.CenterVertically)
                 )
                 when (val c = st.current) {
-                    is TrainingState.CallingState.InCall -> Text("Letzter Ruf: ${c.move}")
-                    is TrainingState.CallingState.InWindow -> Text("Letzter Ruf: ${c.move}")
-                    is TrainingState.CallingState.InRoundPause -> Text("Pause Runde ${c.round}")
-                    TrainingState.CallingState.Countdown -> Text("Countdown")
+                    is TrainingState.CallingState.InCall -> Text(strings.lastCallFormat.format(c.move))
+                    is TrainingState.CallingState.InWindow -> Text(strings.lastCallFormat.format(c.move))
+                    is TrainingState.CallingState.InRoundPause -> Text(strings.pauseRoundFormat.format(c.round))
+                    TrainingState.CallingState.Countdown -> Text(strings.countdown)
                 }
             }
             TrainingState.Finished -> {
                 Text(
-                    text = "Fertig!",
+                    text = strings.finishedExclamation,
                     style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier.weight(1f).wrapContentHeight(Alignment.CenterVertically)
                 )
@@ -106,18 +107,19 @@ fun TrainingScreen(
                 Button(
                     onClick = onResume,
                     modifier = Modifier.weight(1f)
-                ) { Text("Fortsetzen") }
+                ) { Text(strings.resume) }
             } else if (s !is TrainingState.Finished && s !is TrainingState.Idle) {
                 OutlinedButton(
                     onClick = onPause,
                     modifier = Modifier.weight(1f)
-                ) { Text("Pause") }
+                ) { Text(strings.pause) }
             }
             Button(
                 onClick = onStop,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Beenden") }
+            ) { Text(strings.stop) }
         }
     }
 }
+
