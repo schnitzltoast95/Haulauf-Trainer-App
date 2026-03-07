@@ -83,6 +83,7 @@ data class Strings(
     val delete: String,
     val deletePreset: String,
     val deletePresetConfirm: String,
+    val presetSaved: String,
     val duration: String,
     // Training
     val pause: String,
@@ -205,6 +206,7 @@ val StringsDe = Strings(
     delete = "Löschen",
     deletePreset = "Training löschen",
     deletePresetConfirm = "Möchtest du \"%s\" wirklich löschen?",
+    presetSaved = "Training gespeichert",
     duration = "Dauer",
     pause = "Pause",
     resume = "Fortsetzen",
@@ -324,6 +326,7 @@ val StringsEn = Strings(
     delete = "Delete",
     deletePreset = "Delete Preset",
     deletePresetConfirm = "Are you sure you want to delete \"%s\"?",
+    presetSaved = "Preset saved",
     duration = "Duration",
     pause = "Pause",
     resume = "Resume",

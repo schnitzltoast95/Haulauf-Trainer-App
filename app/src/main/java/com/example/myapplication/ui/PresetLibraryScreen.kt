@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import com.example.myapplication.ui.theme.HaulaufTextSecondary
 fun PresetLibraryScreen(
     savedPresets: List<SavedPreset>,
     allMoves: List<Move>,
+    showSavedFeedback: Boolean = false,
     onStartPreset: (SavedPreset) -> Unit,
     onEditPreset: (SavedPreset) -> Unit,
     onDeletePreset: (SavedPreset) -> Unit,
@@ -40,8 +42,16 @@ fun PresetLibraryScreen(
 ) {
     var showDeleteDialog by remember { mutableStateOf<SavedPreset?>(null) }
     val s = LocalStrings.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(showSavedFeedback) {
+        if (showSavedFeedback) {
+            snackbarHostState.showSnackbar(message = s.presetSaved)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(s.trainingLibraryTitle) },

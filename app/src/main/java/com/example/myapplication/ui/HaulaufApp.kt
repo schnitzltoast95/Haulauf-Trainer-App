@@ -55,14 +55,25 @@ fun HaulaufApp(
                 },
                 onSavePreset = { name ->
                     viewModel.savePreset(name)
+                    navController.navigate("presets?saved=true") {
+                        popUpTo("setup") { inclusive = true }
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
         }
-        composable("presets") {
+        composable(
+            route = "presets?saved={saved}",
+            arguments = listOf(navArgument("saved") {
+                type = NavType.BoolType
+                defaultValue = false
+            })
+        ) { backStackEntry ->
+            val showSavedFeedback = backStackEntry.arguments?.getBoolean("saved") ?: false
             PresetLibraryScreen(
                 savedPresets = savedPresets,
                 allMoves = allMoves,
+                showSavedFeedback = showSavedFeedback,
                 onStartPreset = { savedPreset ->
                     viewModel.loadPreset(savedPreset)
                     viewModel.savePresetAndStart { navController.navigate("training") }

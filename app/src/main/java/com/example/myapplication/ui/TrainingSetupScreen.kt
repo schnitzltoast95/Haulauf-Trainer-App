@@ -44,6 +44,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -69,11 +70,14 @@ import com.example.myapplication.data.Move
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.ui.theme.HaulaufCard
+import com.example.myapplication.ui.theme.HaulaufCardBorder
 import com.example.myapplication.ui.theme.HaulaufGold
 import com.example.myapplication.ui.theme.HaulaufGoldDark
 import com.example.myapplication.ui.theme.HaulaufGoldLight
 import com.example.myapplication.ui.theme.HaulaufTextSecondary
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 private const val MIN_MOVE_PRIORITY = 1
 private const val MAX_MOVE_PRIORITY = 3
@@ -434,27 +438,55 @@ fun TrainingSetupScreen(
                     Spacer(Modifier.height(12.dp))
                     
                     // Tabs for categories
-                    TabRow(selectedTabIndex = selectedCategoryTab) {
-                        Tab(
-                            selected = selectedCategoryTab == 0,
-                            onClick = { selectedCategoryTab = 0 },
-                            text = { Text(s.all) }
-                        )
-                        Tab(
-                            selected = selectedCategoryTab == 1,
-                            onClick = { selectedCategoryTab = 1 },
-                            text = { Text(s.haue) }
-                        )
-                        Tab(
-                            selected = selectedCategoryTab == 2,
-                            onClick = { selectedCategoryTab = 2 },
-                            text = { Text(s.huten) }
-                        )
-                        Tab(
-                            selected = selectedCategoryTab == 3,
-                            onClick = { selectedCategoryTab = 3 },
-                            text = { Text(s.stiche) }
-                        )
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = Color.White.copy(alpha = 0.03f),
+                        border = BorderStroke(1.dp, HaulaufCardBorder)
+                    ) {
+                        TabRow(
+                            selectedTabIndex = selectedCategoryTab,
+                            containerColor = Color.Transparent,
+                            contentColor = HaulaufGoldLight,
+                            divider = {},
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier
+                                        .tabIndicatorOffset(tabPositions[selectedCategoryTab])
+                                        .padding(horizontal = 14.dp),
+                                    height = 2.dp,
+                                    color = HaulaufGoldLight
+                                )
+                            }
+                        ) {
+                            Tab(
+                                selected = selectedCategoryTab == 0,
+                                onClick = { selectedCategoryTab = 0 },
+                                selectedContentColor = HaulaufGoldLight,
+                                unselectedContentColor = HaulaufTextSecondary,
+                                text = { Text(s.all, fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal) }
+                            )
+                            Tab(
+                                selected = selectedCategoryTab == 1,
+                                onClick = { selectedCategoryTab = 1 },
+                                selectedContentColor = HaulaufGoldLight,
+                                unselectedContentColor = HaulaufTextSecondary,
+                                text = { Text(s.haue, fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal) }
+                            )
+                            Tab(
+                                selected = selectedCategoryTab == 2,
+                                onClick = { selectedCategoryTab = 2 },
+                                selectedContentColor = HaulaufGoldLight,
+                                unselectedContentColor = HaulaufTextSecondary,
+                                text = { Text(s.huten, fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal) }
+                            )
+                            Tab(
+                                selected = selectedCategoryTab == 3,
+                                onClick = { selectedCategoryTab = 3 },
+                                selectedContentColor = HaulaufGoldLight,
+                                unselectedContentColor = HaulaufTextSecondary,
+                                text = { Text(s.stiche, fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal) }
+                            )
+                        }
                     }
                     
                     Spacer(Modifier.height(12.dp))
