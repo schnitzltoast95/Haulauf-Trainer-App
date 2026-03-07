@@ -26,7 +26,6 @@ class TrainingEngine(
     val state: StateFlow<TrainingState> = _state.asStateFlow()
 
     private var engineJob: Job? = null
-    private var metronomeJob: Job? = null
     private var lastCalledMoveId: String? = null
 
     fun start() {
@@ -49,25 +48,29 @@ class TrainingEngine(
 
                     if (!scope.isActive) return@launch
                     onStopMetronome()
-                    metronomeJob?.cancel()
-                    metronomeJob = if (preset.metronomeEnabled) {
-                        scope.launch {
-                            delay(preset.metronomeBeatIntervalMs)
-                            while (scope.isActive) {
-                                onPlayMetronomeTick()
-                                delay(preset.metronomeBeatIntervalMs)
-                            }
-                        }
-                    } else null
+                    val metronomeBeatCount = preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt()
+                    val metronomeTickIntervalMs = if (preset.metronomeEnabled) {
+                        // Place beats strictly between move call and end tone:
+                        // 1 beat -> at 1/2, 2 beats -> at 1/3 and 2/3, etc.
+                        (windowMs / (metronomeBeatCount + 1).toDouble()).toLong().coerceAtLeast(1L)
+                    } else {
+                        Long.MAX_VALUE
+                    }
+                    var nextTickAtMs = metronomeTickIntervalMs
 
                     val startTime = System.currentTimeMillis()
                     while (scope.isActive) {
                         val elapsed = System.currentTimeMillis() - startTime
                         _state.value = TrainingState.WaitingWindow(move.displayName, globalUnit, round, preset.totalUnits, preset.rounds, elapsed, windowMs)
 
+                        if (preset.metronomeEnabled && elapsed < windowMs) {
+                            while (elapsed >= nextTickAtMs && nextTickAtMs < windowMs) {
+                                onPlayMetronomeTick()
+                                nextTickAtMs += metronomeTickIntervalMs
+                            }
+                        }
+
                         if (elapsed >= windowMs) {
-                            metronomeJob?.cancel()
-                            metronomeJob = null
                             onStopMetronome()
                             if (preset.endBeepEnabled) onPlayEndBeep()
                             lastCalledMoveId = move.id
@@ -140,8 +143,6 @@ class TrainingEngine(
             else -> return
         }
         engineJob?.cancel()
-        metronomeJob?.cancel()
-        metronomeJob = null
         onStopMetronome()
         _state.value = TrainingState.Paused(current)
     }
@@ -154,8 +155,6 @@ class TrainingEngine(
 
     fun stop() {
         engineJob?.cancel()
-        metronomeJob?.cancel()
-        metronomeJob = null
         onStopMetronome()
         _state.value = TrainingState.Idle
     }

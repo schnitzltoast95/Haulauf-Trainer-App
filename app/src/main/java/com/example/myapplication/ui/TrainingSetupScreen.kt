@@ -111,7 +111,9 @@ fun TrainingSetupScreen(
     var showAdvanced by remember { mutableStateOf(false) }
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
-    var metronomeInterval by remember(preset.metronomeBeatIntervalMs) { mutableStateOf(preset.metronomeBeatIntervalMs / 1000f) }
+    var metronomeBeats by remember(preset.metronomeBeatIntervalMs) {
+        mutableStateOf(preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt())
+    }
     var noRep by remember(preset.noImmediateRepetition) { mutableStateOf(preset.noImmediateRepetition) }
     var initialCountdownSec by remember(preset.initialCountdownMs) { mutableStateOf((preset.initialCountdownMs / 1000).toInt()) }
 
@@ -127,7 +129,7 @@ fun TrainingSetupScreen(
         movePriorities,
         endBeep,
         metronome,
-        metronomeInterval,
+        metronomeBeats,
         noRep,
         initialCountdownSec
     ) {
@@ -145,7 +147,7 @@ fun TrainingSetupScreen(
                     .mapValues { (_, priority) -> normalizeMovePriority(priority) },
                 endBeepEnabled = endBeep,
                 metronomeEnabled = metronome,
-                metronomeBeatIntervalMs = (metronomeInterval * 1000).toLong(),
+                metronomeBeatIntervalMs = metronomeBeats.toLong(),
                 noImmediateRepetition = noRep,
                 initialCountdownMs = (initialCountdownSec.coerceIn(1, 30) * 1000L),
                 volumeCall = preset.volumeCall,
@@ -591,8 +593,8 @@ fun TrainingSetupScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             StepperInline(
-                                value = metronomeInterval.toInt(),
-                                onChange = { v -> metronomeInterval = v.coerceAtLeast(1).toFloat() }
+                                value = metronomeBeats,
+                                onChange = { v -> metronomeBeats = v.coerceIn(1, 32) }
                             )
                         }
                         Spacer(Modifier.height(8.dp))

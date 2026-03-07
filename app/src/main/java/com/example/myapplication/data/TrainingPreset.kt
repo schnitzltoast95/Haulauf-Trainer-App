@@ -10,7 +10,8 @@ data class TrainingPreset(
     val selectedMoveIds: Set<String> = DEFAULT_MOVES.map { it.id }.toSet(),
     val endBeepEnabled: Boolean = true,
     val metronomeEnabled: Boolean = false,
-    val metronomeBeatIntervalMs: Long = 500,
+    // Number of metronome ticks between move call and end tone.
+    val metronomeBeatIntervalMs: Long = 2,
     val noImmediateRepetition: Boolean = false,
     val initialCountdownMs: Long = 5000,
     val movePriorities: Map<String, Int> = emptyMap(),

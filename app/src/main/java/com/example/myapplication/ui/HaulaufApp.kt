@@ -92,6 +92,7 @@ fun HaulaufApp(
         }
         composable("training") {
             TrainingScreen(
+                preset = preset,
                 state = viewModel.trainingState,
                 onPause = viewModel::pauseTraining,
                 onResume = viewModel::resumeTraining,

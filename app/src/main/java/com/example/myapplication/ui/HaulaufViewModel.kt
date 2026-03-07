@@ -27,6 +27,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     )
 
     private var engine: TrainingEngine? = null
+    private var userEditedPreset = false
 
     val preset = MutableStateFlow(TrainingPreset())
     private val _trainingState = MutableStateFlow<TrainingState>(TrainingState.Idle)
@@ -91,7 +92,10 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         viewModelScope.launch {
-            prefs.getLastUsedPreset()?.let { preset.value = it }
+            val storedPreset = prefs.getLastUsedPreset()
+            if (!userEditedPreset && storedPreset != null) {
+                preset.value = storedPreset
+            }
             audioManager.setTtsRate(prefs.getTtsSpeechRate())
         }
     }
@@ -110,11 +114,15 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun updatePreset(newPreset: TrainingPreset) {
+        userEditedPreset = true
         preset.value = newPreset
+        viewModelScope.launch {
+            prefs.saveLastUsedPreset(newPreset)
+        }
     }
 
     fun updateAdvancedPreset(newPreset: TrainingPreset) {
-        preset.value = newPreset
+        updatePreset(newPreset)
     }
 
     fun startQuickstart(onNavigate: () -> Unit) {

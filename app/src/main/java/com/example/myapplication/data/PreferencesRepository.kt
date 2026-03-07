@@ -31,7 +31,7 @@ class PreferencesRepository(private val context: Context) {
                 },
                 endBeepEnabled = prefs[END_BEEP_ENABLED] ?: true,
                 metronomeEnabled = prefs[METRONOME_ENABLED] ?: false,
-                metronomeBeatIntervalMs = prefs[METRONOME_INTERVAL_MS] ?: 500L,
+                metronomeBeatIntervalMs = normalizeMetronomeBeats(prefs[METRONOME_INTERVAL_MS]),
                 noImmediateRepetition = prefs[NO_IMMEDIATE_REP] ?: false,
                 initialCountdownMs = prefs[INITIAL_COUNTDOWN_MS] ?: 5000L,
                 movePriorities = parseMovePriorities(prefs[MOVE_PRIORITIES]),
@@ -95,7 +95,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[SELECTED_MOVES] = preset.selectedMoveIds
             prefs[END_BEEP_ENABLED] = preset.endBeepEnabled
             prefs[METRONOME_ENABLED] = preset.metronomeEnabled
-            prefs[METRONOME_INTERVAL_MS] = preset.metronomeBeatIntervalMs
+            prefs[METRONOME_INTERVAL_MS] = normalizeMetronomeBeats(preset.metronomeBeatIntervalMs)
             prefs[NO_IMMEDIATE_REP] = preset.noImmediateRepetition
             prefs[INITIAL_COUNTDOWN_MS] = preset.initialCountdownMs.coerceIn(1000L, 30000L)
             val priorities = preset.movePriorities
@@ -165,7 +165,7 @@ class PreferencesRepository(private val context: Context) {
                             },
                             endBeepEnabled = presetJson.getBoolean("endBeepEnabled"),
                             metronomeEnabled = presetJson.getBoolean("metronomeEnabled"),
-                            metronomeBeatIntervalMs = presetJson.getLong("metronomeBeatIntervalMs"),
+                            metronomeBeatIntervalMs = normalizeMetronomeBeats(presetJson.getLong("metronomeBeatIntervalMs")),
                             noImmediateRepetition = presetJson.getBoolean("noImmediateRepetition"),
                             initialCountdownMs = if (presetJson.has("initialCountdownMs") && !presetJson.isNull("initialCountdownMs")) presetJson.getLong("initialCountdownMs") else 5000L,
                             movePriorities = if (presetJson.has("movePriorities") && !presetJson.isNull("movePriorities")) {
@@ -242,7 +242,7 @@ class PreferencesRepository(private val context: Context) {
                 put("selectedMoveIds", JSONArray(savedPreset.preset.selectedMoveIds.toList()))
                 put("endBeepEnabled", savedPreset.preset.endBeepEnabled)
                 put("metronomeEnabled", savedPreset.preset.metronomeEnabled)
-                put("metronomeBeatIntervalMs", savedPreset.preset.metronomeBeatIntervalMs)
+                put("metronomeBeatIntervalMs", normalizeMetronomeBeats(savedPreset.preset.metronomeBeatIntervalMs))
                 put("noImmediateRepetition", savedPreset.preset.noImmediateRepetition)
                 put("initialCountdownMs", savedPreset.preset.initialCountdownMs.coerceIn(1000L, 30000L))
                 put("movePriorities", JSONObject().apply {
@@ -350,5 +350,19 @@ class PreferencesRepository(private val context: Context) {
                 ?.coerceIn(minMovePriority, maxMovePriority) ?: return@mapNotNull null
             moveId to priority
         }?.toMap() ?: emptyMap()
+    }
+
+    /**
+     * Migration-safe normalization:
+     * - current format stores beat count in [1, 32]
+     * - legacy format stored milliseconds (e.g. 500, 1000, 2000)
+     */
+    private fun normalizeMetronomeBeats(raw: Long?): Long {
+        val value = raw ?: 2L
+        return when {
+            value < 1L -> 2L
+            value <= 32L -> value
+            else -> (value / 1000L).coerceIn(1L, 32L)
+        }
     }
 }

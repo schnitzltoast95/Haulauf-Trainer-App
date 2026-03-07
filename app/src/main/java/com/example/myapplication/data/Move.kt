@@ -19,8 +19,8 @@ val DEFAULT_MOVES = listOf(
     Move("krumphau", "Krumphau", MoveCategory.HAU),
     Move("scheitelhau", "Scheitelhau", MoveCategory.HAU),
     Move("zornhau", "Zornhau", MoveCategory.HAU),
-    Move("sturz", "Sturz", MoveCategory.HAU),
-    Move("prell", "Prell", MoveCategory.HAU),
+    Move("sturzhau", "Sturzhau", MoveCategory.HAU),
+    Move("prellhau", "Prellhau", MoveCategory.HAU),
     Move("blendhau", "Blendhau", MoveCategory.HAU),
     // Huten
     Move("vom_tag", "Vom Tag", MoveCategory.HUT),
