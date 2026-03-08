@@ -114,6 +114,7 @@ fun HaulaufApp(
                 state = viewModel.trainingState,
                 onPause = viewModel::pauseTraining,
                 onResume = viewModel::resumeTraining,
+                onRestart = viewModel::restartTraining,
                 onStop = {
                     viewModel.stopTraining()
                     navController.popBackStack("home", inclusive = false)

@@ -178,6 +178,11 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         getApplication<Application>().stopService(Intent(getApplication(), TrainingForegroundService::class.java))
     }
 
+    fun restartTraining() {
+        stopTraining()
+        startTraining(preset.value) {}
+    }
+
     fun getMoveOverride(moveId: String): String? = moveOverrides.value[moveId]
 
     fun addCustomMove(displayName: String, category: MoveCategory) {

@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Move
@@ -387,14 +386,20 @@ fun TrainingSetupScreen(
                 Column(Modifier.padding(16.dp)) {
                     // Filter moves based on selected tab
                     val movesByCategory = allMoves.groupBy { it.category }
+                    val hauMoves = movesByCategory[MoveCategory.HAU] ?: emptyList()
+                    val hutMoves = movesByCategory[MoveCategory.HUT] ?: emptyList()
+                    val stichMoves = movesByCategory[MoveCategory.STICH] ?: emptyList()
                     val movesToShow = when (selectedCategoryTab) {
-                        1 -> movesByCategory[MoveCategory.HAU] ?: emptyList()
-                        2 -> movesByCategory[MoveCategory.HUT] ?: emptyList()
-                        3 -> movesByCategory[MoveCategory.STICH] ?: emptyList()
+                        1 -> hauMoves
+                        2 -> hutMoves
+                        3 -> stichMoves
                         else -> allMoves
                     }
                     val visibleMoveIds = movesToShow.map { it.id }.toSet()
                     val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedIds }
+                    val selectedHauCount = hauMoves.count { it.id in selectedIds }
+                    val selectedHutCount = hutMoves.count { it.id in selectedIds }
+                    val selectedStichCount = stichMoves.count { it.id in selectedIds }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -412,17 +417,9 @@ fun TrainingSetupScreen(
                                     selectedIds = selectedIds - visibleMoveIds
                                     movePriorities = movePriorities - visibleMoveIds
                                 } else {
-                                    if (selectedCategoryTab == 0) {
-                                        val missingIds = visibleMoveIds - selectedIds
-                                        selectedIds = selectedIds + visibleMoveIds
-                                        movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
-                                    } else {
-                                        // In category tabs, "Select all" should result in exactly that tab's moves selected.
-                                        val keptPriorities = movePriorities.filterKeys { it in visibleMoveIds }
-                                        val missingIds = visibleMoveIds - keptPriorities.keys
-                                        selectedIds = visibleMoveIds
-                                        movePriorities = keptPriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
-                                    }
+                                    val missingIds = visibleMoveIds - selectedIds
+                                    selectedIds = selectedIds + visibleMoveIds
+                                    movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
                                 }
                             },
                             enabled = movesToShow.isNotEmpty(),
@@ -463,32 +460,51 @@ fun TrainingSetupScreen(
                                 onClick = { selectedCategoryTab = 0 },
                                 selectedContentColor = HaulaufGoldLight,
                                 unselectedContentColor = HaulaufTextSecondary,
-                                text = { Text(s.all, fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal) }
+                                text = {
+                                    Text(
+                                        "${s.all}\n(${selectedIds.size})",
+                                        fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
                             )
                             Tab(
                                 selected = selectedCategoryTab == 1,
                                 onClick = { selectedCategoryTab = 1 },
                                 selectedContentColor = HaulaufGoldLight,
                                 unselectedContentColor = HaulaufTextSecondary,
-                                text = { Text(s.haue, fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal) }
+                                text = {
+                                    Text(
+                                        "${s.haue}\n($selectedHauCount)",
+                                        fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
                             )
                             Tab(
                                 selected = selectedCategoryTab == 2,
                                 onClick = { selectedCategoryTab = 2 },
                                 selectedContentColor = HaulaufGoldLight,
                                 unselectedContentColor = HaulaufTextSecondary,
-                                text = { Text(s.huten, fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal) }
+                                text = {
+                                    Text(
+                                        "${s.huten}\n($selectedHutCount)",
+                                        fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
                             )
                             Tab(
                                 selected = selectedCategoryTab == 3,
                                 onClick = { selectedCategoryTab = 3 },
                                 selectedContentColor = HaulaufGoldLight,
                                 unselectedContentColor = HaulaufTextSecondary,
-                                text = { Text(s.stiche, fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal) }
+                                text = {
+                                    Text(
+                                        "${s.stiche}\n($selectedStichCount)",
+                                        fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
                             )
                         }
                     }
-                    
                     Spacer(Modifier.height(12.dp))
                     
                     movesToShow.forEach { move ->
@@ -599,16 +615,19 @@ fun TrainingSetupScreen(
                         }
                         Spacer(Modifier.height(8.dp))
                     }
-                    
-                    // Selected count at the bottom
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "${selectedIds.size} ${s.selected}",
+                        text = s.selectionSummary,
                         style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End
+                        color = Color.White
                     )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "${s.haue}: $selectedHauCount · ${s.huten}: $selectedHutCount · ${s.stiche}: $selectedStichCount",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HaulaufTextSecondary
+                    )
+                    
                 }
             }
 

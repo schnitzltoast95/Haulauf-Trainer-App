@@ -19,6 +19,7 @@ fun TrainingScreen(
     state: StateFlow<TrainingState>,
     onPause: () -> Unit,
     onResume: () -> Unit,
+    onRestart: () -> Unit,
     onStop: () -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -60,6 +61,17 @@ fun TrainingScreen(
                         .fillMaxWidth()
                         .heightIn(min = 96.dp)
                 ) { Text(strings.pause, style = MaterialTheme.typography.headlineSmall) }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+            if (s is TrainingState.Finished) {
+                OutlinedButton(
+                    onClick = onRestart,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 96.dp)
+                ) {
+                    Text(strings.restartTraining, style = MaterialTheme.typography.headlineSmall)
+                }
                 Spacer(modifier = Modifier.height(20.dp))
             }
             Button(
