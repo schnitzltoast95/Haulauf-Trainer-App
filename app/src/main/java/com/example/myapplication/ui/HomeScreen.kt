@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -34,6 +35,7 @@ fun HomeScreen(
     onQuickstart: () -> Unit,
     onConfigureTraining: () -> Unit,
     onEditCurrentSession: () -> Unit,
+    onOpenMoveDetails: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPresets: () -> Unit,
 ) {
@@ -88,12 +90,75 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 ConfigureTrainingButton(onClick = onConfigureTraining)
                 Spacer(modifier = Modifier.height(12.dp))
-                PresetsButton(onClick = onOpenPresets)
+                LibraryButtonsRow(
+                    onOpenPresets = onOpenPresets,
+                    onOpenMoveDetails = onOpenMoveDetails
+                )
             }
             Text(
                 text = s.historicalSubtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryButtonsRow(
+    onOpenPresets: () -> Unit,
+    onOpenMoveDetails: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedButton(
+            onClick = onOpenPresets,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White,
+                containerColor = HaulaufCard
+            ),
+            border = null
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.List,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = LocalStrings.current.trainingsShort,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        OutlinedButton(
+            onClick = onOpenMoveDetails,
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White,
+                containerColor = HaulaufCard
+            ),
+            border = null
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = LocalStrings.current.movesShort,
+                style = MaterialTheme.typography.titleMedium
             )
         }
     }
@@ -267,34 +332,6 @@ private fun SessionStat(value: String, label: String) {
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = HaulaufTextSecondary
-        )
-    }
-}
-
-@Composable
-private fun PresetsButton(onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = Color.White,
-            containerColor = HaulaufCard
-        ),
-        border = null
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.List,
-            contentDescription = null,
-            modifier = Modifier.size(22.dp),
-            tint = Color.White
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = LocalStrings.current.trainingLibrary,
-            style = MaterialTheme.typography.titleMedium
         )
     }
 }

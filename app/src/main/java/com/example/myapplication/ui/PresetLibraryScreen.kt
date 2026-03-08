@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -35,6 +36,7 @@ fun PresetLibraryScreen(
     savedPresets: List<SavedPreset>,
     allMoves: List<Move>,
     showSavedFeedback: Boolean = false,
+    onCreateNew: () -> Unit,
     onStartPreset: (SavedPreset) -> Unit,
     onEditPreset: (SavedPreset) -> Unit,
     onDeletePreset: (SavedPreset) -> Unit,
@@ -58,6 +60,14 @@ fun PresetLibraryScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onCreateNew) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = s.newTraining
+                        )
                     }
                 }
             )
@@ -269,7 +279,7 @@ private fun PresetCard(
                 }
                 OutlinedButton(
                     onClick = onDelete,
-                    modifier = Modifier.width(56.dp),
+                    modifier = Modifier.width(64.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
@@ -277,7 +287,7 @@ private fun PresetCard(
                     Icon(
                         imageVector = Icons.Filled.Delete,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }

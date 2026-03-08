@@ -41,6 +41,7 @@ fun HaulaufApp(
                 },
                 onConfigureTraining = { navController.navigate("setup") },
                 onEditCurrentSession = { navController.navigate("setup") },
+                onOpenMoveDetails = { navController.navigate("move_audio_list") },
                 onOpenSettings = { navController.navigate("settings") },
                 onOpenPresets = { navController.navigate("presets") }
             )
@@ -74,6 +75,7 @@ fun HaulaufApp(
                 savedPresets = savedPresets,
                 allMoves = allMoves,
                 showSavedFeedback = showSavedFeedback,
+                onCreateNew = { navController.navigate("setup") },
                 onStartPreset = { savedPreset ->
                     viewModel.loadPreset(savedPreset)
                     viewModel.savePresetAndStart { navController.navigate("training") }
@@ -98,6 +100,10 @@ fun HaulaufApp(
                 allMoves = allMoves,
                 overrideUri = moveOverrides[moveId],
                 onSaveOverride = viewModel::saveMoveOverride,
+                onSaveMoveInfo = { id, description, imagePath ->
+                    viewModel.saveMoveInfo(id, description, imagePath)
+                },
+                onDeleteMove = viewModel::removeCustomMove,
                 onTestMove = viewModel::testMoveAudio,
                 onBack = { navController.popBackStack() }
             )
@@ -118,15 +124,11 @@ fun HaulaufApp(
         composable("settings") {
             SettingsScreen(
                 preset = preset,
-                customMoves = allMoves.filter { it.id.startsWith("custom_") },
                 ttsSpeechRate = ttsSpeechRate,
                 onTtsSpeechRateChange = viewModel::saveTtsSpeechRate,
                 uiLanguage = uiLanguage,
                 onUiLanguageChange = viewModel::saveUiLanguage,
                 onPresetChange = viewModel::updatePreset,
-                onOpenCustomAudio = { navController.navigate("move_audio_list") },
-                onAddMove = viewModel::addCustomMove,
-                onRemoveMove = viewModel::removeCustomMove,
                 onClose = { navController.popBackStack() }
             )
         }
@@ -135,10 +137,7 @@ fun HaulaufApp(
             MoveAudioListScreen(
                 allMoves = allMoves,
                 moveOverrides = moveOverrides,
-                onSaveOverride = viewModel::saveMoveOverride,
-                onSaveMoveInfo = { moveId, description, imagePath ->
-                    viewModel.saveMoveInfo(moveId, description, imagePath)
-                },
+                onAddMove = viewModel::addCustomMove,
                 onTestMove = viewModel::testMoveAudio,
                 onOpenMoveDetails = { id -> navController.navigate("move_audio/$id") },
                 onBack = { navController.popBackStack() }
