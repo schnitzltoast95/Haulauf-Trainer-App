@@ -100,6 +100,7 @@ fun HaulaufApp(
                 allMoves = allMoves,
                 overrideUri = moveOverrides[moveId],
                 onSaveOverride = viewModel::saveMoveOverride,
+                onRenameCustomMove = viewModel::renameCustomMove,
                 onSaveMoveInfo = { id, description, imagePath ->
                     viewModel.saveMoveInfo(id, description, imagePath)
                 },

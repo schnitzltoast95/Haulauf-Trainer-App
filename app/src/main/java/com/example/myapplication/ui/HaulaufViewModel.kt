@@ -154,9 +154,11 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
                 audioManager.playMoveAudio(move, overridesSnapshot[move.id])
             },
             onPlayEndBeep = { audioManager.playEndBeep() },
-            onPlayCountdownBeep = { audioManager.playCountdownBeep() },
+            onPlayCountdownBeep = { secondsRemaining -> audioManager.playCountdownBeep(secondsRemaining) },
+            onPlayRoundFinishedSignal = { audioManager.playRoundFinishedSignal() },
+            onPlayTrainingFinishedSignal = { audioManager.playTrainingFinishedSignal() },
             onPlayMetronomeTick = { audioManager.playMetronomeTick() },
-            onStopMetronome = { audioManager.stopAll() }
+            onStopMetronome = { audioManager.stopMetronome() }
         )
         viewModelScope.launch {
             engine!!.state.collect { _trainingState.value = it }
@@ -175,6 +177,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     fun stopTraining() {
         engine?.stop()
+        audioManager.stopAll()
         getApplication<Application>().stopService(Intent(getApplication(), TrainingForegroundService::class.java))
     }
 
@@ -202,6 +205,13 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             prefs.saveLastUsedPreset(preset.value)
         }
     }
+
+    fun renameCustomMove(moveId: String, newTitle: String) {
+        viewModelScope.launch {
+            prefs.updateCustomMoveTitle(moveId, newTitle)
+        }
+    }
+
     fun saveMoveOverride(moveId: String, uri: String?) {
         viewModelScope.launch {
             prefs.saveMoveAudioOverride(moveId, uri)

@@ -140,6 +140,25 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun updateCustomMoveTitle(moveId: String, newTitle: String) {
+        val trimmedTitle = newTitle.trim()
+        if (trimmedTitle.isEmpty()) return
+
+        context.dataStore.edit { prefs ->
+            val current = prefs[CUSTOM_MOVES_KEY] ?: emptySet()
+            val updated = current.map { entry ->
+                val parts = entry.split("|")
+                if (parts.isNotEmpty() && parts[0] == moveId) {
+                    val category = if (parts.size >= 3) parts[2] else MoveCategory.HAU.name
+                    "$moveId|$trimmedTitle|$category"
+                } else {
+                    entry
+                }
+            }.toSet()
+            prefs[CUSTOM_MOVES_KEY] = updated
+        }
+    }
+
     suspend fun getLastUsedPreset(): TrainingPreset? = lastUsedPreset.first()
     suspend fun getMoveAudioOverrides(): Map<String, String> = moveAudioOverrides.first()
 

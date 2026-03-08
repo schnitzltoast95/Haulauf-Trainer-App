@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -121,6 +122,8 @@ fun TrainingSetupScreen(
     }
     var noRep by remember(preset.noImmediateRepetition) { mutableStateOf(preset.noImmediateRepetition) }
     var initialCountdownSec by remember(preset.initialCountdownMs) { mutableStateOf((preset.initialCountdownMs / 1000).toInt()) }
+    val availableMoveIds = remember(allMoves) { allMoves.map { it.id }.toSet() }
+    val selectedValidIds = selectedIds.intersect(availableMoveIds)
 
     LaunchedEffect(
         rounds,
@@ -146,9 +149,9 @@ fun TrainingSetupScreen(
                 reactionIntervalMinMs = if (!fixedInterval) (intervalMinSec * 1000).toLong() else null,
                 reactionIntervalMaxMs = if (!fixedInterval) (intervalMaxSec * 1000).toLong() else null,
                 pauseBetweenRoundsMs = (pauseSec * 1000).toLong(),
-                selectedMoveIds = selectedIds,
+                selectedMoveIds = selectedValidIds,
                 movePriorities = movePriorities
-                    .filterKeys { it in selectedIds }
+                    .filterKeys { it in selectedValidIds }
                     .mapValues { (_, priority) -> normalizeMovePriority(priority) },
                 endBeepEnabled = endBeep,
                 metronomeEnabled = metronome,
@@ -177,6 +180,71 @@ fun TrainingSetupScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(
+                color = HaulaufCard,
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onStart,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = MaterialTheme.shapes.large,
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 8.dp,
+                            pressedElevation = 4.dp
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                                    ),
+                                    shape = MaterialTheme.shapes.large
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = s.startTraining,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showSavePresetDialog = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = s.savePreset,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
         }
     ) { padding ->
         Column(
@@ -396,10 +464,14 @@ fun TrainingSetupScreen(
                         else -> allMoves
                     }
                     val visibleMoveIds = movesToShow.map { it.id }.toSet()
-                    val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedIds }
-                    val selectedHauCount = hauMoves.count { it.id in selectedIds }
-                    val selectedHutCount = hutMoves.count { it.id in selectedIds }
-                    val selectedStichCount = stichMoves.count { it.id in selectedIds }
+                    val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedValidIds }
+                    val selectedHauCount = hauMoves.count { it.id in selectedValidIds }
+                    val selectedHutCount = hutMoves.count { it.id in selectedValidIds }
+                    val selectedStichCount = stichMoves.count { it.id in selectedValidIds }
+                    val totalAllCount = allMoves.size
+                    val totalHauCount = hauMoves.size
+                    val totalHutCount = hutMoves.size
+                    val totalStichCount = stichMoves.size
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -414,11 +486,11 @@ fun TrainingSetupScreen(
                         TextButton(
                             onClick = {
                                 if (allVisibleSelected) {
-                                    selectedIds = selectedIds - visibleMoveIds
+                                    selectedIds = selectedValidIds - visibleMoveIds
                                     movePriorities = movePriorities - visibleMoveIds
                                 } else {
-                                    val missingIds = visibleMoveIds - selectedIds
-                                    selectedIds = selectedIds + visibleMoveIds
+                                    val missingIds = visibleMoveIds - selectedValidIds
+                                    selectedIds = selectedValidIds + visibleMoveIds
                                     movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
                                 }
                             },
@@ -462,7 +534,7 @@ fun TrainingSetupScreen(
                                 unselectedContentColor = HaulaufTextSecondary,
                                 text = {
                                     Text(
-                                        "${s.all}\n(${selectedIds.size})",
+                                        "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
                                         fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
                                     )
                                 }
@@ -474,7 +546,7 @@ fun TrainingSetupScreen(
                                 unselectedContentColor = HaulaufTextSecondary,
                                 text = {
                                     Text(
-                                        "${s.haue}\n($selectedHauCount)",
+                                        "${s.haue}\n($selectedHauCount/$totalHauCount)",
                                         fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
                                     )
                                 }
@@ -486,7 +558,7 @@ fun TrainingSetupScreen(
                                 unselectedContentColor = HaulaufTextSecondary,
                                 text = {
                                     Text(
-                                        "${s.huten}\n($selectedHutCount)",
+                                        "${s.huten}\n($selectedHutCount/$totalHutCount)",
                                         fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
                                     )
                                 }
@@ -498,7 +570,7 @@ fun TrainingSetupScreen(
                                 unselectedContentColor = HaulaufTextSecondary,
                                 text = {
                                     Text(
-                                        "${s.stiche}\n($selectedStichCount)",
+                                        "${s.stiche}\n($selectedStichCount/$totalStichCount)",
                                         fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
                                     )
                                 }
@@ -508,11 +580,11 @@ fun TrainingSetupScreen(
                     Spacer(Modifier.height(12.dp))
                     
                     movesToShow.forEach { move ->
-                                val selected = move.id in selectedIds
+                                val selected = move.id in selectedValidIds
                                 val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
                                 val increasePriority: () -> Unit = {
                                     if (!selected) {
-                                        selectedIds = selectedIds + move.id
+                                        selectedIds = selectedValidIds + move.id
                                         movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
                                     } else {
                                         val newPriority = nextMovePriority(priority)
@@ -527,10 +599,10 @@ fun TrainingSetupScreen(
                                         .combinedClickable(
                                             onClick = {
                                             if (selected) {
-                                                selectedIds = selectedIds - move.id
+                                                selectedIds = selectedValidIds - move.id
                                                 movePriorities = movePriorities - move.id
                                             } else {
-                                                selectedIds = selectedIds + move.id
+                                                selectedIds = selectedValidIds + move.id
                                                 movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
                                             }
                                         },
@@ -623,7 +695,7 @@ fun TrainingSetupScreen(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "${s.haue}: $selectedHauCount · ${s.huten}: $selectedHutCount · ${s.stiche}: $selectedStichCount",
+                        text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
                         style = MaterialTheme.typography.bodySmall,
                         color = HaulaufTextSecondary
                     )
@@ -739,65 +811,6 @@ fun TrainingSetupScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            // Start Training and Save Preset buttons side by side
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Start Training button
-                Button(
-                    onClick = onStart,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.large,
-                    contentPadding = PaddingValues(0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 4.dp
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
-                                ),
-                                shape = MaterialTheme.shapes.large
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = s.startTraining,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = Color.White
-                        )
-                    }
-                }
-
-                // Save Preset button
-                OutlinedButton(
-                    onClick = { showSavePresetDialog = true },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = s.savePreset,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
         }
     }
 

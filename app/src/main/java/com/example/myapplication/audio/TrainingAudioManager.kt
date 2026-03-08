@@ -9,6 +9,8 @@ import android.speech.tts.UtteranceProgressListener
 import android.media.ToneGenerator
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -25,6 +27,7 @@ class TrainingAudioManager(
     private var soundPool: SoundPool? = null
     private var tickSoundId = 0
     private var windowEndSoundId = 0
+    private val signalHandler = Handler(Looper.getMainLooper())
 
     init {
         initTts()
@@ -150,9 +153,41 @@ class TrainingAudioManager(
         }
     }
 
-    /** Short beep for countdown (3-2-1 at start and during round pause). */
-    fun playCountdownBeep() {
-        toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+    /** Countdown beeps: first ones low, only the last one (1) high. */
+    fun playCountdownBeep(secondsRemaining: Int) {
+        val clamped = secondsRemaining.coerceIn(1, 5)
+        val tone = if (clamped == 1) {
+            ToneGenerator.TONE_DTMF_9
+        } else {
+            ToneGenerator.TONE_DTMF_1
+        }
+        val durationMs = 120
+        toneGenerator?.startTone(tone, durationMs)
+    }
+
+    fun playRoundFinishedSignal() {
+        playToneSequence(
+            tones = intArrayOf(ToneGenerator.TONE_DTMF_2, ToneGenerator.TONE_DTMF_2),
+            toneDurationMs = 90,
+            gapMs = 300
+        )
+    }
+
+    fun playTrainingFinishedSignal() {
+        playToneSequence(
+            tones = intArrayOf(ToneGenerator.TONE_DTMF_8, ToneGenerator.TONE_DTMF_6, ToneGenerator.TONE_DTMF_9),
+            toneDurationMs = 120,
+            gapMs = 160
+        )
+    }
+
+    private fun playToneSequence(tones: IntArray, toneDurationMs: Int, gapMs: Long) {
+        tones.forEachIndexed { index, tone ->
+            signalHandler.postDelayed(
+                { toneGenerator?.startTone(tone, toneDurationMs) },
+                index * gapMs
+            )
+        }
     }
 
     fun playMetronomeTick() {
@@ -163,11 +198,23 @@ class TrainingAudioManager(
         }
     }
 
+    /**
+     * Metronome ticks are one-shot sounds and do not require an explicit stop.
+     * Keep this separate from stopAll(), which also stops TTS playback.
+     */
+    fun stopMetronome() {
+        // no-op by design
+    }
+
     fun stopAll() {
+        signalHandler.removeCallbacksAndMessages(null)
+        toneGenerator?.stopTone()
         tts?.stop()
     }
 
     fun release() {
+        signalHandler.removeCallbacksAndMessages(null)
+        toneGenerator?.stopTone()
         tts?.stop()
         tts?.shutdown()
         tts = null

@@ -8,16 +8,20 @@ import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -49,11 +53,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.myapplication.data.Move
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.ui.theme.HaulaufCard
@@ -284,6 +292,7 @@ fun MoveAudioScreen(
     allMoves: List<Move>,
     overrideUri: String?,
     onSaveOverride: (String, String?) -> Unit,
+    onRenameCustomMove: (String, String) -> Unit,
     onSaveMoveInfo: (String, String?, String?) -> Unit,
     onDeleteMove: (String) -> Unit,
     onTestMove: (String) -> Unit,
@@ -298,6 +307,7 @@ fun MoveAudioScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAudioMenu by remember { mutableStateOf(false) }
 
+    var customTitle by remember(move.id, move.displayName) { mutableStateOf(move.displayName) }
     var description by remember(move.id, move.description) { mutableStateOf(move.description ?: "") }
     var imagePath by remember(move.id, move.imagePath) { mutableStateOf(move.imagePath) }
     var isRecording by remember { mutableStateOf(false) }
@@ -320,6 +330,16 @@ fun MoveAudioScreen(
 
     fun saveMoveInfoNow() {
         onSaveMoveInfo(move.id, description.trim().ifBlank { null }, imagePath)
+    }
+
+    fun saveDetailsNow() {
+        if (move.id.startsWith("custom_")) {
+            val trimmedTitle = customTitle.trim()
+            if (trimmedTitle.isNotEmpty() && trimmedTitle != move.displayName) {
+                onRenameCustomMove(move.id, trimmedTitle)
+            }
+        }
+        saveMoveInfoNow()
     }
 
     fun toggleRecording() {
@@ -448,6 +468,24 @@ fun MoveAudioScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(s.moveDetails, color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    if (move.id.startsWith("custom_")) {
+                        OutlinedTextField(
+                            value = customTitle,
+                            onValueChange = { customTitle = it },
+                            label = { Text(s.newMoveName) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = HaulaufGoldLight,
+                                unfocusedBorderColor = HaulaufTextSecondary,
+                                cursorColor = HaulaufGoldLight,
+                                focusedLabelColor = HaulaufGoldLight,
+                                unfocusedLabelColor = HaulaufTextSecondary
+                            )
+                        )
+                    }
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
@@ -466,11 +504,44 @@ fun MoveAudioScreen(
                             unfocusedLabelColor = HaulaufTextSecondary
                         )
                     )
-                    Text(
-                        text = "${s.image}: ${if (imagePath.isNullOrBlank()) s.none else s.imageUpdated}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
-                    )
+                    Text(s.image, style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                    val currentImagePath = imagePath
+                    val imageModel = when {
+                        currentImagePath.isNullOrBlank() -> null
+                        currentImagePath.startsWith("content://") || currentImagePath.startsWith("file://") ->
+                            ImageRequest.Builder(context).data(Uri.parse(currentImagePath)).build()
+                        else -> {
+                            val file = File(currentImagePath)
+                            if (file.exists()) ImageRequest.Builder(context).data(file).build() else null
+                        }
+                    }
+                    if (imageModel != null) {
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = "${s.image}: ${move.displayName}",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 160.dp, max = 260.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.DarkGray.copy(alpha = 0.3f))
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.DarkGray.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = s.noImage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HaulaufTextSecondary
+                            )
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -495,7 +566,7 @@ fun MoveAudioScreen(
                     }
                     Button(
                         onClick = {
-                            saveMoveInfoNow()
+                            saveDetailsNow()
                             scope.launch { snackbarHostState.showSnackbar(s.moveDetailsSaved) }
                         },
                         modifier = Modifier.fillMaxWidth()
