@@ -5,6 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +27,7 @@ fun TrainingScreen(
 ) {
     val strings = LocalStrings.current
     val s by state.collectAsState()
+    var isStopping by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,7 +41,11 @@ fun TrainingScreen(
                 .weight(2f),
             contentAlignment = Alignment.Center
         ) {
-            TrainingStatusContent(state = s, preset = preset)
+            if (isStopping) {
+                Text(strings.endTraining + "…", style = MaterialTheme.typography.headlineMedium)
+            } else {
+                TrainingStatusContent(state = s, preset = preset)
+            }
         }
 
         Column(
@@ -46,6 +54,9 @@ fun TrainingScreen(
                 .weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
+            if (isStopping) {
+                return@Column
+            }
             if (s is TrainingState.Paused) {
                 Button(
                     onClick = onResume,
@@ -75,7 +86,10 @@ fun TrainingScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
             Button(
-                onClick = onStop,
+                onClick = {
+                    isStopping = true
+                    onStop()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 96.dp),
