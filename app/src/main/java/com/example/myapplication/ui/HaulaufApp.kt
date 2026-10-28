@@ -22,6 +22,7 @@ fun HaulaufApp(
     val savedPresets by viewModel.savedPresets.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
     val ttsSpeechRate by viewModel.ttsSpeechRate.collectAsState()
+    val ttsVoiceName by viewModel.ttsVoiceName.collectAsState()
 
     val strings = remember(uiLanguage) {
         if (uiLanguage == "en") StringsEn else StringsDe
@@ -128,6 +129,8 @@ fun HaulaufApp(
                 preset = preset,
                 ttsSpeechRate = ttsSpeechRate,
                 onTtsSpeechRateChange = viewModel::saveTtsSpeechRate,
+                ttsVoiceName = ttsVoiceName,
+                onTtsVoiceChange = viewModel::saveTtsVoiceName,
                 uiLanguage = uiLanguage,
                 onUiLanguageChange = viewModel::saveUiLanguage,
                 onPresetChange = viewModel::updatePreset,
