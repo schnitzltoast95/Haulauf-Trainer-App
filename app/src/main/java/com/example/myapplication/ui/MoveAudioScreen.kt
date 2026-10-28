@@ -1,6 +1,7 @@
 package com.example.myapplication.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri
@@ -378,11 +379,21 @@ fun MoveAudioScreen(
     }
 
     val audioFilePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            onSaveOverride(move.id, uri.toString())
-            scope.launch { snackbarHostState.showSnackbar(s.audioUpdated) }
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                onSaveOverride(move.id, uri.toString())
+                scope.launch { snackbarHostState.showSnackbar(s.audioUpdated) }
+            } catch (_: SecurityException) {
+                scope.launch { snackbarHostState.showSnackbar(s.audioImportFailed) }
+            } catch (_: IllegalArgumentException) {
+                scope.launch { snackbarHostState.showSnackbar(s.audioImportFailed) }
+            }
         }
     }
 
@@ -620,7 +631,7 @@ fun MoveAudioScreen(
                     }
                     OutlinedButton(
                         onClick = {
-                            audioFilePicker.launch("audio/*")
+                            audioFilePicker.launch(arrayOf("audio/*"))
                             showAudioMenu = false
                         },
                         modifier = Modifier.fillMaxWidth()
