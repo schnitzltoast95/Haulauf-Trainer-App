@@ -32,6 +32,8 @@ Open in Android Studio for development.
 
 Before the next signed release build, complete [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), including the audio check on the release candidate.
 
+For a GitHub APK release, build `:app:assembleRelease` and sign the result with `tools/sign-release.ps1 -Version <version>` on the Windows build machine. The signing key and its DPAPI-protected password are kept in `../release-signing/` outside this public repository. Back up **both** files privately; the DPAPI password file can only be decrypted by the same Windows account on the same installation. Never commit the private key or its password. The old APK in `app/release/` uses a different signing certificate, so upgrading from that copy to version 1.1.0 requires uninstalling it once.
+
 ## Tests
 
 Run the training unit tests, Android Lint, and build a matching app/test APK pair:
