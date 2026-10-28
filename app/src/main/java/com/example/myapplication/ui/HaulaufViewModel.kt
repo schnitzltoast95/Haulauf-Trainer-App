@@ -2,6 +2,7 @@ package com.example.myapplication.ui
 
 import android.app.Application
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.DEFAULT_MOVES
@@ -15,6 +16,7 @@ import com.example.myapplication.training.TrainingEngine
 import com.example.myapplication.training.TrainingState
 import com.example.myapplication.audio.TrainingAudioManager
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class HaulaufViewModel(application: Application) : AndroidViewModel(application) {
@@ -27,6 +29,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     )
 
     private var engine: TrainingEngine? = null
+    private var engineStateJob: Job? = null
     private var userEditedPreset = false
 
     val preset = MutableStateFlow(TrainingPreset())
@@ -142,11 +145,15 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     private fun startTraining(p: TrainingPreset, onNavigate: () -> Unit) {
         val app = getApplication<Application>()
-        app.startForegroundService(Intent(app, TrainingForegroundService::class.java))
+        val movesSnapshot = allMoves.value
+        if (movesSnapshot.none { it.id in p.selectedMoveIds }) return
+
+        engine?.stop()
+        engineStateJob?.cancel()
+        ContextCompat.startForegroundService(app, Intent(app, TrainingForegroundService::class.java))
         audioManager.setVolumes(p.volumeCall, p.volumeBeep, p.volumeTick)
         val overridesSnapshot = moveOverrides.value
-        val movesSnapshot = allMoves.value
-        engine = TrainingEngine(
+        val trainingEngine = TrainingEngine(
             scope = viewModelScope,
             preset = p,
             availableMoves = movesSnapshot,
@@ -160,10 +167,16 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             onPlayMetronomeTick = { audioManager.playMetronomeTick() },
             onStopMetronome = { audioManager.stopMetronome() }
         )
-        viewModelScope.launch {
-            engine!!.state.collect { _trainingState.value = it }
+        engine = trainingEngine
+        engineStateJob = viewModelScope.launch {
+            trainingEngine.state.collect { state ->
+                _trainingState.value = state
+                if (state is TrainingState.Finished) {
+                    stopTrainingService()
+                }
+            }
         }
-        engine!!.start()
+        trainingEngine.start()
         onNavigate()
     }
 
@@ -177,8 +190,12 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     fun stopTraining() {
         engine?.stop()
+        engine = null
+        engineStateJob?.cancel()
+        engineStateJob = null
+        _trainingState.value = TrainingState.Idle
         audioManager.stopAll()
-        getApplication<Application>().stopService(Intent(getApplication(), TrainingForegroundService::class.java))
+        stopTrainingService()
     }
 
     fun restartTraining() {
@@ -254,6 +271,12 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onCleared() {
+        stopTrainingService()
         audioManager.release()
+    }
+
+    private fun stopTrainingService() {
+        val app = getApplication<Application>()
+        app.stopService(Intent(app, TrainingForegroundService::class.java))
     }
 }

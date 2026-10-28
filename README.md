@@ -29,3 +29,23 @@ Ensure Java (JDK 17 recommended) and Android SDK are installed, then:
 ```
 
 Open in Android Studio for development.
+
+Before the next signed release build, complete [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), including the audio check on the release candidate.
+
+## Tests
+
+Run the training unit tests, Android Lint, and build a matching app/test APK pair:
+
+```
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+```
+
+On an authorized Android test device, install both APKs from that build and run the instrumentation suite:
+
+```
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w -r com.example.myapplication.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+The instrumentation APK must be paired with the debug app APK from the same build. A differently signed release APK cannot be updated with this debug APK; use a dedicated test device and remove only `com.example.myapplication` before installing when switching signatures.
