@@ -517,15 +517,7 @@ fun MoveAudioScreen(
                     )
                     Text(s.image, style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
                     val currentImagePath = imagePath
-                    val imageModel = when {
-                        currentImagePath.isNullOrBlank() -> null
-                        currentImagePath.startsWith("content://") || currentImagePath.startsWith("file://") ->
-                            ImageRequest.Builder(context).data(Uri.parse(currentImagePath)).build()
-                        else -> {
-                            val file = File(currentImagePath)
-                            if (file.exists()) ImageRequest.Builder(context).data(file).build() else null
-                        }
-                    }
+                    val imageModel = moveImageModel(context, currentImagePath, move.historicalImageRes)
                     if (imageModel != null) {
                         AsyncImage(
                             model = imageModel,
@@ -553,6 +545,7 @@ fun MoveAudioScreen(
                             )
                         }
                     }
+                    MoveHistoricalAttribution(move, showingHistoricalImage = currentImagePath.isNullOrBlank())
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

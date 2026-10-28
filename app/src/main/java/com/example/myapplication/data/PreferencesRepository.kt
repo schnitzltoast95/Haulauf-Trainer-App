@@ -216,6 +216,10 @@ class PreferencesRepository(private val context: Context) {
         prefs[TTS_SPEECH_RATE_KEY] ?: 1.4f
     }
 
+    val ttsVoiceName: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[TTS_VOICE_NAME_KEY]
+    }
+
     val uiLanguage: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[UI_LANGUAGE_KEY] ?: "de"
     }
@@ -321,11 +325,19 @@ class PreferencesRepository(private val context: Context) {
     suspend fun getMoveInfo(): Map<String, Pair<String?, String?>> = moveInfo.first()
 
     suspend fun getTtsSpeechRate(): Float = ttsSpeechRate.first()
+    suspend fun getTtsVoiceName(): String? = ttsVoiceName.first()
     suspend fun getUiLanguage(): String = uiLanguage.first()
 
     suspend fun saveTtsSpeechRate(rate: Float) {
         context.dataStore.edit { prefs ->
             prefs[TTS_SPEECH_RATE_KEY] = rate.coerceIn(0.5f, 2f)
+        }
+    }
+
+    suspend fun saveTtsVoiceName(name: String?) {
+        context.dataStore.edit { prefs ->
+            if (name.isNullOrBlank()) prefs.remove(TTS_VOICE_NAME_KEY)
+            else prefs[TTS_VOICE_NAME_KEY] = name
         }
     }
 
@@ -357,6 +369,7 @@ class PreferencesRepository(private val context: Context) {
         private val SAVED_PRESETS_KEY = stringPreferencesKey("saved_presets")
         private val MOVE_INFO_KEY = stringSetPreferencesKey("move_info")
         private val TTS_SPEECH_RATE_KEY = floatPreferencesKey("tts_speech_rate")
+        private val TTS_VOICE_NAME_KEY = stringPreferencesKey("tts_voice_name")
         private val UI_LANGUAGE_KEY = stringPreferencesKey("ui_language")
     }
 

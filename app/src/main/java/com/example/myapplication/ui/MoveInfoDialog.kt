@@ -85,19 +85,8 @@ fun MoveInfoDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Image/GIF preview – load from content URI or file path
-                val imagePath = move.imagePath
-                if (!imagePath.isNullOrEmpty()) {
-                    val context = LocalContext.current
-                    val imageModel = when {
-                        imagePath.startsWith("content://") || imagePath.startsWith("file://") ->
-                            ImageRequest.Builder(context).data(Uri.parse(imagePath)).build()
-                        else -> {
-                            val file = File(imagePath)
-                            if (file.exists()) ImageRequest.Builder(context).data(file).build()
-                            else null
-                        }
-                    }
-                    if (imageModel != null) {
+                val imageModel = moveImageModel(LocalContext.current, move.imagePath, move.historicalImageRes)
+                if (imageModel != null) {
                         AsyncImage(
                             model = imageModel,
                             contentDescription = "${s.moveInfo}: ${move.displayName}",
@@ -108,12 +97,11 @@ fun MoveInfoDialog(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color.DarkGray.copy(alpha = 0.3f))
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    } else {
-                        MoveInfoImagePlaceholder()
-                    }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MoveHistoricalAttribution(move, showingHistoricalImage = move.imagePath.isNullOrBlank())
                 } else {
                     MoveInfoImagePlaceholder()
+                    MoveHistoricalAttribution(move, showingHistoricalImage = false)
                 }
 
                 // Description

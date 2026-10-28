@@ -87,6 +87,12 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         1.4f
     )
 
+    val ttsVoiceName = prefs.ttsVoiceName.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        null
+    )
+
     val uiLanguage = prefs.uiLanguage.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -100,6 +106,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
                 preset.value = storedPreset
             }
             audioManager.setTtsRate(prefs.getTtsSpeechRate())
+            audioManager.setTtsVoice(prefs.getTtsVoiceName())
         }
     }
 
@@ -107,6 +114,13 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             prefs.saveTtsSpeechRate(rate)
             audioManager.setTtsRate(rate)
+        }
+    }
+
+    fun saveTtsVoiceName(name: String?) {
+        viewModelScope.launch {
+            prefs.saveTtsVoiceName(name)
+            audioManager.setTtsVoice(name)
         }
     }
 

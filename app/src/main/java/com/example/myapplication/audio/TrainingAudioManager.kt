@@ -24,6 +24,7 @@ class TrainingAudioManager(
 ) {
     private var tts: TextToSpeech? = null
     private var ttsSpeechRate: Float = 1.4f
+    private var ttsVoiceName: String? = null
     private var toneGenerator: ToneGenerator? = null
     private var soundPool: SoundPool? = null
     private var tickSoundId = 0
@@ -41,6 +42,7 @@ class TrainingAudioManager(
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.GERMAN
+                applySelectedVoice()
                 tts?.setSpeechRate(ttsSpeechRate)
             }
         }
@@ -49,6 +51,23 @@ class TrainingAudioManager(
     fun setTtsRate(rate: Float) {
         ttsSpeechRate = rate.coerceIn(0.5f, 2f)
         tts?.setSpeechRate(ttsSpeechRate)
+    }
+
+    fun setTtsVoice(name: String?) {
+        ttsVoiceName = name
+        applySelectedVoice()
+    }
+
+    private fun applySelectedVoice() {
+        val engine = tts ?: return
+        val selected = ttsVoiceName?.let { name ->
+            engine.voices?.firstOrNull {
+                it.name == name && it.locale.language == Locale.GERMAN.language && !it.isNetworkConnectionRequired
+            }
+        }
+        if (selected == null || engine.setVoice(selected) != TextToSpeech.SUCCESS) {
+            engine.language = Locale.GERMAN
+        }
     }
 
     private fun initToneGenerator() {
