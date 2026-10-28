@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import com.example.myapplication.R
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -27,6 +28,7 @@ class TrainingAudioManager(
     private var soundPool: SoundPool? = null
     private var tickSoundId = 0
     private var windowEndSoundId = 0
+    private var trainingFinishedSoundId = 0
     private val signalHandler = Handler(Looper.getMainLooper())
 
     init {
@@ -68,6 +70,9 @@ class TrainingAudioManager(
         try {
             val resId = context.resources.getIdentifier("window_end", "raw", context.packageName)
             if (resId != 0) windowEndSoundId = soundPool!!.load(context, resId, 1)
+        } catch (_: Exception) {}
+        try {
+            trainingFinishedSoundId = soundPool!!.load(context, R.raw.training_finished, 1)
         } catch (_: Exception) {}
     }
 
@@ -174,11 +179,11 @@ class TrainingAudioManager(
     }
 
     fun playTrainingFinishedSignal() {
-        playToneSequence(
-            tones = intArrayOf(ToneGenerator.TONE_DTMF_8, ToneGenerator.TONE_DTMF_6, ToneGenerator.TONE_DTMF_9),
-            toneDurationMs = 120,
-            gapMs = 160
-        )
+        if (trainingFinishedSoundId != 0) {
+            soundPool?.play(trainingFinishedSoundId, volumeBeep, volumeBeep, 1, 0, 1f)
+        } else {
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 250)
+        }
     }
 
     private fun playToneSequence(tones: IntArray, toneDurationMs: Int, gapMs: Long) {
