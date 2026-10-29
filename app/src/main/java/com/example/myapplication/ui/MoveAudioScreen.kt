@@ -545,7 +545,7 @@ fun MoveAudioScreen(
                             )
                         }
                     }
-                    MoveHistoricalAttribution(move, showingHistoricalImage = currentImagePath.isNullOrBlank())
+                    MoveHistoricalAttribution(move, showingHistoricalImage = imageModel != null && imageModel == move.historicalImageRes)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
