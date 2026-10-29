@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Move
@@ -276,16 +275,11 @@ private fun CurrentSessionCard(
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.fillMaxWidth()) {
-                    Text(if (de) "Schnellstart" else "Quick start",
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge)
-                    Icon(Icons.Filled.Edit,
-                        contentDescription = if (de) "Training anpassen" else "Adjust training",
-                        modifier = Modifier.align(Alignment.CenterEnd).size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(if (de) "Schnellstart" else "Quick start",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(24.dp))
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     if (maxWidth < 280.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f) {
@@ -304,8 +298,8 @@ private fun CurrentSessionCard(
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                Text(if (de) "Zufallsansagen aus ${selectedMoveNames.size} ausgewählten Übungen"
-                    else "Random calls from ${selectedMoveNames.size} selected exercises",
+                Text(if (de) "Ausgewählte Übungen (${selectedMoveNames.size})"
+                    else "Selected exercises (${selectedMoveNames.size})",
                     textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (selectedMoveNames.isEmpty()) {
@@ -314,13 +308,12 @@ private fun CurrentSessionCard(
                     Text(selectedMoveNames.joinToString(", "),
                         modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Spacer(Modifier.height(24.dp))
+                QuickstartButton(onStart, selectedMoveNames)
             }
         }
-        Spacer(Modifier.height(16.dp))
-        QuickstartButton(onStart, selectedMoveNames)
     }
 }
 
