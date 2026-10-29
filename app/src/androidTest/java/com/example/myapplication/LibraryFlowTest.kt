@@ -79,6 +79,15 @@ class LibraryFlowTest {
         File(context.getExternalFilesDir(null), "$name.png").outputStream().use { shot.compress(Bitmap.CompressFormat.PNG, 100, it) }
         shot.recycle()
     }
+    @Test fun homeSettingsCanBeOpenedAgainAfterReturning() {
+        showApp()
+        compose.onNodeWithContentDescription(StringsDe.settings).performClick()
+        compose.onNodeWithText(StringsDe.settings).assertIsDisplayed()
+        compose.onNodeWithContentDescription(StringsDe.close).performClick()
+        compose.onNodeWithContentDescription(StringsDe.settings).assertIsDisplayed().performClick()
+        compose.onNodeWithText(StringsDe.settings).assertIsDisplayed()
+    }
+
     @Test fun editRetainsIdentityCopyGetsNewIdentityAndCancelKeepsSavedValue() {
         val repo = PreferencesRepository(context)
         val id = UUID.randomUUID().toString()
