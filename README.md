@@ -23,6 +23,10 @@ Add optional custom sounds to `app/src/main/res/raw/`:
 - **tick.wav** – Metronome tick (fallback: system tone)
 - **window_end.wav** – End-of-window beep (fallback: system tone)
 
+Pass their compiled resource IDs as `tickResource = R.raw.tick` and
+`windowEndResource = R.raw.window_end` when constructing `TrainingAudioManager`.
+With no IDs supplied, the existing system-tone fallbacks remain active.
+
 Move calls use Text-to-Speech (TTS) by default. Open an exercise from the exercise library to preview its announcement or stage an audio recording/file and save it with the other details.
 
 ## Build

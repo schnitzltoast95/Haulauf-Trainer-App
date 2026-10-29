@@ -10,7 +10,7 @@ gemeinsamen Audiopegeln. Die 19 historischen StandardÃ¼bungen bleiben enthalten.
 - VollstÃ¤ndiger Debug-Testbuild, kein signierter Produktionsrelease.
 - App: **Haulauf Ablauf-Test**, Paket `com.example.myapplication.flowreview`.
 - Version: `1.0`, VersionCode `1`.
-- SHA-256: `1F3006D8BDA0497295DA45FCA056918A50686834BF69918DDAB993861F2F7B42`.
+- SHA-256: `703BD4A9C75DD71D9D1857816F03162DB11B6ECBCBC96BC411B52714C40F0DF3`.
 - GerÃ¤t: A001, Android 16, 1080 Ã— 2392; Schriftfaktor 1.0.
 - Basis: GitHub-main `dd5e23b`; geprÃ¼fter Quellstand ist der Commit mit diesem Bericht.
 
@@ -18,8 +18,8 @@ gemeinsamen Audiopegeln. Die 19 historischen StandardÃ¼bungen bleiben enthalten.
 
 - Gesamter Build erfolgreich, App und Instrumentierungs-APK aus demselben Build.
 - **2 Unit-Tests bestanden**, keine Fehler oder Ã¼bersprungenen Tests.
-- **13 Android-GerÃ¤tetests bestanden**, komplette Instrumentierungssuite, 56,834 Sekunden.
-- Android Lint: **0 Fehler, 25 Warnungen, 9 Hinweise**. Warnungen sind nicht als behoben ausgewiesen.
+- **13 Android-GerÃ¤tetests bestanden**, komplette Instrumentierungssuite, 58,428 Sekunden.
+- Android Lint: **0 Fehler, 0 Warnungen, 0 Hinweise**.
 - `git diff --check`: ohne Befund.
 
 Die GerÃ¤tetests umfassen historische Bilder und Quellen fÃ¼r alle StandardÃ¼bungen,
@@ -46,3 +46,17 @@ Lokale Rohprotokolle und GerÃ¤tebilder liegen unter `.impeccable/review/` und we
 nicht versioniert. APKs werden auÃŸerhalb des Quellrepositories bereitgestellt.
 Offene praktische PrÃ¼fungen sind in [NEXT_STEPS.md](NEXT_STEPS.md) dokumentiert;
 bestandene automatisierte Tests ersetzen diese Freigaben nicht.
+
+## Lint-Bereinigung und Audit
+
+Die 25 Warnungen und 9 Hinweise sind ohne Lint-Unterdrückungen bereinigt.
+Nicht verwendete historische Scans liegen unverändert unter `docs/historical-reference/`;
+die 19 verwendeten Standardübungen sind durch die historische Testsuite abgedeckt.
+Optionale Signaldateien werden jetzt über explizite Resource-IDs eingebunden
+(siehe README); die bisher aktiven Systemton-Fallbacks bleiben erhalten.
+Launcher-Icons nutzen die vorhandenen Vektoren statt uneinheitlicher Rastergrößen.
+Auf Android 16 wurden normales und monochromes Icon zusätzlich visuell geprüft.
+Die Legacy-Icon-Darstellung auf Android 7/8 wurde nicht auf einem solchen Gerät geprüft.
+
+Das anschließende Quellcode-Audit steht in [ANDROID_AUDIT.md](ANDROID_AUDIT.md):
+12/20, sechs offene Befunde außerhalb der Lint-Bereinigung.

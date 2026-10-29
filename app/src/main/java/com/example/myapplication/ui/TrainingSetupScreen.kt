@@ -54,6 +54,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -107,14 +109,14 @@ fun TrainingSetupScreen(
     var saveCopy by remember { mutableStateOf(false) }
     var showPriorities by remember { mutableStateOf(false) }
     val de = s === StringsDe
-    var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
-    var rounds by remember(preset.rounds) { mutableStateOf(preset.rounds) }
-    var unitsPerRound by remember(preset.unitsPerRound) { mutableStateOf(preset.unitsPerRound) }
+    var selectedCategoryTab by remember { mutableIntStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
+    var rounds by remember(preset.rounds) { mutableIntStateOf(preset.rounds) }
+    var unitsPerRound by remember(preset.unitsPerRound) { mutableIntStateOf(preset.unitsPerRound) }
     var fixedInterval by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMinMs == null) }
-    var intervalSec by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMs / 1000f) }
-    var intervalMinSec by remember(preset.reactionIntervalMinMs ?: 5f) { mutableStateOf((preset.reactionIntervalMinMs ?: 5000) / 1000f) }
-    var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
-    var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableStateOf(preset.pauseBetweenRoundsMs / 1000f) }
+    var intervalSec by remember(preset.reactionIntervalMs) { mutableFloatStateOf(preset.reactionIntervalMs / 1000f) }
+    var intervalMinSec by remember(preset.reactionIntervalMinMs ?: 5f) { mutableFloatStateOf((preset.reactionIntervalMinMs ?: 5000) / 1000f) }
+    var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableFloatStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
+    var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableFloatStateOf(preset.pauseBetweenRoundsMs / 1000f) }
     var selectedIds by remember(preset.selectedMoveIds) { mutableStateOf(preset.selectedMoveIds) }
     var movePriorities by remember(preset.movePriorities) {
         mutableStateOf(
@@ -126,10 +128,10 @@ fun TrainingSetupScreen(
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
     var metronomeBeats by remember(preset.metronomeBeatIntervalMs) {
-        mutableStateOf(preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt())
+        mutableIntStateOf(preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt())
     }
     var noRep by remember(preset.noImmediateRepetition) { mutableStateOf(preset.noImmediateRepetition) }
-    var initialCountdownSec by remember(preset.initialCountdownMs) { mutableStateOf((preset.initialCountdownMs / 1000).toInt()) }
+    var initialCountdownSec by remember(preset.initialCountdownMs) { mutableIntStateOf((preset.initialCountdownMs / 1000).toInt()) }
     val availableMoveIds = remember(allMoves) { allMoves.map { it.id }.toSet() }
     val selectedValidIds = selectedIds.intersect(availableMoveIds)
 
