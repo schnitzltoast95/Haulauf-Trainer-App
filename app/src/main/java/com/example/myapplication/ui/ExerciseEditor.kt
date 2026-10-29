@@ -254,13 +254,14 @@ fun ExerciseEditor(
                 modifier = Modifier.fillMaxWidth()) { Text(if (de) "Bilder / Videos hinzufügen" else "Add images / videos") }
             }
             if (section == ExerciseSection.AUDIO) {
-                Text(if (audioUri == null) (standardVoiceLabel ?: if (de) "Standardstimme" else "Default voice") else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording",
-                    style = MaterialTheme.typography.titleMedium)
+                Text(if (audioUri == null) {
+                    if (de) "App-Stimme${standardVoiceLabel?.let { ": $it" }.orEmpty()}" else "App voice${standardVoiceLabel?.let { ": $it" }.orEmpty()}"
+                } else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording", style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) {
                     Text(if (de) "Ansage anhören" else "Listen to call")
                 }
-                TextButton(onClick = { audioUri = null; status(null) }, enabled = audioUri != null && recorder == null) {
-                    Text(if (de) "Standardstimme verwenden" else "Use default voice")
+                if (audioUri != null) TextButton(onClick = { audioUri = null; status(null) }, enabled = recorder == null) {
+                    Text(if (de) "App-Stimme verwenden" else "Use app voice")
                 }
                 Button(onClick = {
                     if (recorder != null) stopRecording()
@@ -268,6 +269,8 @@ fun ExerciseEditor(
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (recorder != null) s.stopRecording else s.newRecording) }
                 OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
+                Text(if (de) "Die App-Stimme gilt für alle Übungen und wird in den Einstellungen gewählt. Hier kannst du eine eigene Aufnahme oder Datei verwenden."
+                    else "The app voice applies to all exercises and is chosen in settings. Here you can use your own recording or file.", style = MaterialTheme.typography.bodyMedium)
             }
             message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }

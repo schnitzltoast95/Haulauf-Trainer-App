@@ -113,31 +113,12 @@ fun ExerciseDetailScreen(
         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
     }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(categoryLabel(move.category), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
-            if (move.id.startsWith("custom_") && onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.DATA) }) {
-                Text(if (de) "Übungsdaten bearbeiten" else "Edit exercise details")
-            }
-
-            HorizontalDivider()
-            Text(if (de) "Ruf / Ansage" else "Training call", style = MaterialTheme.typography.titleLarge)
-            Text(if (overrideUri == null) (standardVoiceLabel ?: if (de) "Standardstimme" else "Default voice")
-                else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording")
             WrappingControls {
-                if (onPreview != null) OutlinedButton(onClick = onPreview) { Text(if (de) "Anhören" else "Listen") }
-                if (onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.AUDIO) }) { Text(if (de) "Ansage ändern" else "Change call") }
+                Text(categoryLabel(move.category), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                if (onPreview != null) TextButton(onClick = onPreview) { Text(if (de) "Ansage anhören" else "Listen to call") }
             }
-
-            HorizontalDivider()
+            Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
             Text(if (de) "Bilder & Videos" else "Images & videos", style = MaterialTheme.typography.titleLarge)
-            if (onEdit != null) WrappingControls {
-                OutlinedButton(onClick = { onAddMedia?.invoke() ?: onEdit(ExerciseSection.MEDIA) }) {
-                    Text(if (de) "Medien hinzufügen" else "Add media")
-                }
-                if (move.media.isNotEmpty()) TextButton(onClick = { onEdit(ExerciseSection.MEDIA) }) {
-                    Text(if (de) "Medien verwalten" else "Manage media")
-                }
-            }
             move.historicalImageRes?.let {
                 AsyncImage(it, if (de) "Historische Illustration zu ${move.displayName}" else "Historical illustration for ${move.displayName}",
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp))
@@ -155,10 +136,33 @@ fun ExerciseDetailScreen(
             HorizontalDivider()
             Text(if (de) "Notizen" else "Notes", style = MaterialTheme.typography.titleLarge)
             Text(move.notes.ifBlank { if (de) "Noch keine Notizen zu dieser Übung." else "No notes for this exercise yet." }, style = MaterialTheme.typography.bodyLarge)
-            if (onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.NOTES) }) {
-                Text(if (de) { if (move.notes.isBlank()) "Notiz hinzufügen" else "Notizen bearbeiten" }
-                    else { if (move.notes.isBlank()) "Add note" else "Edit notes" })
+            if (onEdit != null) {
+                HorizontalDivider()
+                Text(if (de) "Bearbeiten" else "Edit", style = MaterialTheme.typography.titleLarge)
+                if (move.id.startsWith("custom_")) OutlinedButton(onClick = { onEdit(ExerciseSection.DATA) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (de) "Übungsdaten bearbeiten" else "Edit exercise details")
+                }
+                WrappingControls {
+                    OutlinedButton(onClick = { onAddMedia?.invoke() ?: onEdit(ExerciseSection.MEDIA) }) {
+                        Text(if (de) "Medien hinzufügen" else "Add media")
+                    }
+                    if (move.media.isNotEmpty()) OutlinedButton(onClick = { onEdit(ExerciseSection.MEDIA) }) {
+                        Text(if (de) "Medien verwalten" else "Manage media")
+                    }
+                }
+                OutlinedButton(onClick = { onEdit(ExerciseSection.NOTES) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (de) { if (move.notes.isBlank()) "Notiz hinzufügen" else "Notizen bearbeiten" }
+                        else { if (move.notes.isBlank()) "Add note" else "Edit notes" })
+                }
+                OutlinedButton(onClick = { onEdit(ExerciseSection.AUDIO) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (de) "Ansage ändern" else "Change call")
+                }
+                Text(if (overrideUri == null) {
+                    if (de) "Ansage: ${standardVoiceLabel ?: "App-Stimme"}" else "Call: ${standardVoiceLabel ?: "App voice"}"
+                } else if (de) "Ansage: eigene Audiodatei / Aufnahme" else "Call: custom audio file / recording",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+
         }
     }
 }

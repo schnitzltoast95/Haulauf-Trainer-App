@@ -149,7 +149,7 @@ class ExerciseLibraryTest {
         } }
         compose.onNodeWithText("Ansage anhören").performClick()
         compose.runOnIdle { assertEquals("content://original/audio", preview) }
-        compose.onNodeWithText("Standardstimme verwenden").performClick()
+        compose.onNodeWithText("App-Stimme verwenden").performClick()
         compose.onNodeWithText("Ansage anhören").performClick()
         compose.runOnIdle { assertNull(preview) }
         compose.onNodeWithContentDescription(StringsDe.back).performClick()
