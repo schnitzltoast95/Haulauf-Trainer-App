@@ -48,11 +48,11 @@ class ExerciseLibraryTest {
         val original = DEFAULT_MOVES.first()
         var saved: Move? = null
         compose.setContent { MyApplicationTheme(darkTheme = true) {
-            ExerciseEditor(original.id, listOf(original), null, emptyList(),
+            ExerciseEditor(original.id, listOf(original), null, emptyList(), section = ExerciseSection.NOTES,
                 onSave = { move, _, success, _ -> saved = move; success() }, onPreview = { _, _ -> }, onDelete = { _, _, _ -> }, onBack = {})
         } }
         compose.onNodeWithText(StringsDe.descriptionFieldLabel).assertDoesNotExist()
-        compose.onNodeWithText("Meine Notizen").performTextInput("Schritt beachten | ü")
+        compose.onNodeWithText("Notizen").performTextInput("Schritt beachten | ü")
         compose.onNodeWithText(StringsDe.save, substring = false).performClick()
         compose.runOnIdle {
             assertEquals(original.description, saved!!.description)
@@ -83,13 +83,120 @@ class ExerciseLibraryTest {
         var saves = 0
         var left = false
         compose.setContent { MyApplicationTheme(darkTheme = true) {
-            ExerciseEditor(original.id, listOf(original), null, emptyList(),
+            ExerciseEditor(original.id, listOf(original), null, emptyList(), section = ExerciseSection.NOTES,
                 onSave = { _, _, _, _ -> saves++ }, onPreview = { _, _ -> }, onDelete = { _, _, _ -> }, onBack = { left = true })
         } }
-        compose.onNodeWithText("Meine Notizen").performTextInput("Unsaved")
+        compose.onNodeWithText("Notizen").performTextInput("Unsaved")
         compose.onNodeWithContentDescription(StringsDe.back).performClick()
         compose.onNodeWithText("Verwerfen").performClick()
         compose.runOnIdle { assertEquals(0, saves); assertTrue(left) }
+    }
+
+    @Test fun savingOneSectionPreservesNewerChangesInOtherSections() = runBlocking {
+        val repo = PreferencesRepository(context)
+        val move = repo.addCustomMove("Section isolation", MoveCategory.HAU)
+        try {
+            val stale = move.copy(notes = "Old note", media = listOf(ExerciseMedia("/old/image")))
+            repo.saveExercise(stale, "content://old/audio")
+            repo.saveExercise(move.copy(displayName = "New title", description = "New description"), null, ExerciseSection.DATA)
+            repo.saveExercise(stale.copy(media = listOf(ExerciseMedia("/new/video", ExerciseMediaKind.VIDEO))), null, ExerciseSection.MEDIA)
+            repo.saveExercise(stale.copy(notes = "New note"), null, ExerciseSection.NOTES)
+            assertEquals("New title", repo.customMoves.first().first { it.id == move.id }.displayName)
+            assertEquals("New description", repo.getMoveInfo()[move.id]?.first)
+            assertEquals("New note", repo.exerciseAdditions.first().getValue(move.id).notes)
+            assertEquals("/new/video", repo.exerciseAdditions.first().getValue(move.id).media.single().path)
+            assertEquals("content://old/audio", repo.getMoveAudioOverrides()[move.id])
+            repo.saveExercise(stale, "content://new/audio", ExerciseSection.AUDIO)
+            assertEquals("New note", repo.exerciseAdditions.first().getValue(move.id).notes)
+            assertEquals("/new/video", repo.exerciseAdditions.first().getValue(move.id).media.single().path)
+            assertEquals("content://new/audio", repo.getMoveAudioOverrides()[move.id])
+        } finally { repo.removeCustomMove(move.id) }
+    }
+
+    @Test fun addMediaOpensPickerDirectlyAndKeepsImportAsDraft() {
+        val source = File(context.cacheDir, "direct-media-test.png")
+        val image = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+        source.outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        image.recycle()
+        var saves = 0
+        var left = false
+        androidx.test.espresso.intent.Intents.init()
+        try {
+            androidx.test.espresso.intent.Intents.intending(androidx.test.espresso.intent.matcher.IntentMatchers.hasAction(android.content.Intent.ACTION_OPEN_DOCUMENT))
+                .respondWith(android.app.Instrumentation.ActivityResult(android.app.Activity.RESULT_OK, android.content.Intent().setData(Uri.fromFile(source))))
+            val move = DEFAULT_MOVES.first()
+            compose.setContent { MyApplicationTheme(darkTheme = true) {
+                ExerciseEditor(move.id, listOf(move), null, emptyList(), section = ExerciseSection.MEDIA, addMediaOnOpen = true,
+                    onSave = { _, _, _, _ -> saves++ }, onPreview = { _, _ -> }, onDelete = { _, _, _ -> }, onBack = { left = true })
+            } }
+            compose.waitUntil(5000) { compose.onAllNodesWithText("Ausgewählt – noch nicht gespeichert.").fetchSemanticsNodes().isNotEmpty() }
+            androidx.test.espresso.intent.Intents.intended(androidx.test.espresso.intent.matcher.IntentMatchers.hasAction(android.content.Intent.ACTION_OPEN_DOCUMENT))
+            compose.onNodeWithText("Medium 1 entfernen").assertExists()
+            compose.onNodeWithContentDescription(StringsDe.back).performClick()
+            compose.onNodeWithText("Verwerfen").performClick()
+            compose.runOnIdle { assertTrue(left); assertEquals(0, saves) }
+        } finally { androidx.test.espresso.intent.Intents.release(); source.delete() }
+    }
+
+    @Test fun audioResetIsPreviewableAndCanBeDiscarded() {
+        var preview: String? = "unset"
+        var saved = false
+        var left = false
+        val move = DEFAULT_MOVES.first()
+        compose.setContent { MyApplicationTheme(darkTheme = true) {
+            ExerciseEditor(move.id, listOf(move), "content://original/audio", emptyList(), section = ExerciseSection.AUDIO,
+                onSave = { _, _, _, _ -> saved = true }, onPreview = { _, uri -> preview = uri }, onDelete = { _, _, _ -> }, onBack = { left = true })
+        } }
+        compose.onNodeWithText("Ansage anhören").performClick()
+        compose.runOnIdle { assertEquals("content://original/audio", preview) }
+        compose.onNodeWithText("Standardstimme verwenden").performClick()
+        compose.onNodeWithText("Ansage anhören").performClick()
+        compose.runOnIdle { assertNull(preview) }
+        compose.onNodeWithContentDescription(StringsDe.back).performClick()
+        compose.onNodeWithText("Verwerfen").performClick()
+        compose.runOnIdle { assertTrue(left); assertFalse(saved) }
+    }
+
+    @Test fun sectionEditorOffersContinueEditingAndReturnsAfterSave() {
+        val move = DEFAULT_MOVES.first()
+        var left = false
+        var saved: Move? = null
+        compose.setContent { MyApplicationTheme(darkTheme = true) {
+            ExerciseEditor(move.id, listOf(move), null, emptyList(), section = ExerciseSection.NOTES,
+                onSave = { value, _, done, _ -> saved = value; done() }, onPreview = { _, _ -> }, onDelete = { _, _, _ -> }, onBack = { left = true })
+        } }
+        compose.onNodeWithText("Notizen").performTextInput("Keep this note")
+        compose.onNodeWithContentDescription(StringsDe.back).performClick()
+        compose.onNodeWithText("Weiter bearbeiten").performClick()
+        compose.runOnIdle { assertFalse(left); assertNull(saved) }
+        compose.onNodeWithText("Keep this note").assertExists()
+        compose.onNodeWithText(StringsDe.save).performClick()
+        compose.runOnIdle { assertTrue(left); assertEquals("Keep this note", saved!!.notes) }
+    }
+
+    @Test fun detailActionsOpenSpecificEditorsAndKeepScrollPosition() {
+        val repo = PreferencesRepository(context)
+        val move = runBlocking { repo.addCustomMove("Workflow test", MoveCategory.HAU) }
+        try {
+            val vm = HaulaufViewModel(context.applicationContext as android.app.Application)
+            compose.setContent { MyApplicationTheme(darkTheme = true) { HaulaufApp(vm) } }
+            compose.onAllNodesWithText(StringsDe.movesShort).onLast().performScrollTo().performClick()
+            compose.onNodeWithText("Übung suchen").performTextInput(move.displayName)
+            compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
+            compose.onNodeWithText("Ansage ändern").performScrollTo().performClick()
+            compose.onNodeWithText(StringsDe.chooseFile).assertExists()
+            compose.onNodeWithText("Notizen").assertDoesNotExist()
+            compose.onNodeWithContentDescription(StringsDe.back).performClick()
+            compose.onNodeWithText("Notiz hinzufügen").performScrollTo().performClick()
+            compose.onNodeWithText(StringsDe.chooseFile).assertDoesNotExist()
+            compose.onNodeWithText(StringsDe.descriptionFieldLabel).assertDoesNotExist()
+            compose.onNodeWithText("Notizen").performTextInput("Saved independently")
+            compose.onNodeWithText(StringsDe.save).performClick()
+            compose.waitUntil(5000) { compose.onAllNodesWithText("Notizen bearbeiten").fetchSemanticsNodes().isNotEmpty() && runBlocking { repo.exerciseAdditions.first()[move.id]?.notes == "Saved independently" } }
+            compose.onNodeWithText("Saved independently").assertIsDisplayed()
+            compose.onNodeWithText("Notizen bearbeiten").assertIsDisplayed()
+        } finally { runBlocking { repo.removeCustomMove(move.id) } }
     }
 
     @Test fun replacingResettingAndDeletingAudioCleansOnlyOwnedFiles() = runBlocking {
@@ -122,7 +229,7 @@ class ExerciseLibraryTest {
             compose.onNodeWithText("Übung suchen").performTextInput(move.displayName)
             compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
-            compose.onNodeWithText(StringsDe.editMove).performClick()
+            compose.onNodeWithText("Übungsdaten bearbeiten").performClick()
             compose.onNodeWithText(StringsDe.deleteMoveAction).performScrollTo().performClick()
             compose.onNodeWithText(StringsDe.delete, substring = false).performClick()
             compose.waitUntil(5000) { compose.onAllNodesWithText("Übung suchen").fetchSemanticsNodes().isNotEmpty() }

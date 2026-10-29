@@ -31,6 +31,8 @@ data class Move(
     val media: List<ExerciseMedia> = emptyList(),
 ) : java.io.Serializable
 
+enum class ExerciseSection { DATA, NOTES, MEDIA, AUDIO }
+
 enum class ExerciseMediaKind { IMAGE, VIDEO }
 
 data class ExerciseMedia(val path: String, val kind: ExerciseMediaKind = ExerciseMediaKind.IMAGE) : java.io.Serializable

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -95,26 +96,52 @@ private fun LocalVideo(path: String, modifier: Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseDetailScreen(move: Move, onEdit: (() -> Unit)?, onBack: () -> Unit) {
+fun ExerciseDetailScreen(
+    move: Move,
+    onEdit: ((ExerciseSection) -> Unit)?,
+    onBack: () -> Unit,
+    overrideUri: String? = null,
+    standardVoiceLabel: String? = null,
+    onPreview: (() -> Unit)? = null,
+    onAddMedia: (() -> Unit)? = null,
+) {
     val s = LocalStrings.current
     val de = s === StringsDe
-    var showSources by remember { mutableStateOf(false) }
-    Scaffold(bottomBar = {
-        if (onEdit != null) Surface {
-            OutlinedButton(onClick = onEdit, modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
-                Text(if (move.id.startsWith("custom_")) s.editMove else if (de) "Meine Ergänzungen bearbeiten" else "Edit my additions")
-            }
-        }
-    }, topBar = { TopAppBar(title = { Text(move.displayName) }, navigationIcon = {
+    var showSources by rememberSaveable { mutableStateOf(false) }
+    val scroll = rememberScrollState()
+    Scaffold(topBar = { TopAppBar(title = { Text(move.displayName) }, navigationIcon = {
         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
     }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(categoryLabel(move.category), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
+            if (move.id.startsWith("custom_") && onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.DATA) }) {
+                Text(if (de) "Übungsdaten bearbeiten" else "Edit exercise details")
+            }
+
+            HorizontalDivider()
+            Text(if (de) "Ruf / Ansage" else "Training call", style = MaterialTheme.typography.titleLarge)
+            Text(if (overrideUri == null) (standardVoiceLabel ?: if (de) "Standardstimme" else "Default voice")
+                else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording")
+            WrappingControls {
+                if (onPreview != null) OutlinedButton(onClick = onPreview) { Text(if (de) "Anhören" else "Listen") }
+                if (onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.AUDIO) }) { Text(if (de) "Ansage ändern" else "Change call") }
+            }
+
+            HorizontalDivider()
+            Text(if (de) "Bilder & Videos" else "Images & videos", style = MaterialTheme.typography.titleLarge)
+            if (onEdit != null) WrappingControls {
+                OutlinedButton(onClick = { onAddMedia?.invoke() ?: onEdit(ExerciseSection.MEDIA) }) {
+                    Text(if (de) "Medien hinzufügen" else "Add media")
+                }
+                if (move.media.isNotEmpty()) TextButton(onClick = { onEdit(ExerciseSection.MEDIA) }) {
+                    Text(if (de) "Medien verwalten" else "Manage media")
+                }
+            }
             move.historicalImageRes?.let {
                 AsyncImage(it, if (de) "Historische Illustration zu ${move.displayName}" else "Historical illustration for ${move.displayName}",
-                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp))
+                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp))
             }
-            Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
             if (move.historicalImageRes != null || move.historicalTextSources.isNotEmpty()) {
                 move.historicalNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 TextButton(onClick = { showSources = !showSources }) {
@@ -122,11 +149,16 @@ fun ExerciseDetailScreen(move: Move, onEdit: (() -> Unit)?, onBack: () -> Unit) 
                 }
                 if (showSources) MoveHistoricalAttribution(move, showingHistoricalImage = move.historicalImageRes != null)
             }
-            HorizontalDivider()
-            Text(if (de) "Meine Ergänzungen" else "My additions", style = MaterialTheme.typography.titleLarge)
-            Text(move.notes.ifBlank { if (de) "Noch keine eigenen Notizen." else "No personal notes yet." }, style = MaterialTheme.typography.bodyLarge)
             move.media.forEachIndexed { index, item -> key(item.path) { ExerciseMediaPreview(item, index + 1) } }
+            if (move.historicalImageRes == null && move.media.isEmpty()) Text(if (de) "Noch keine Bilder oder Videos." else "No images or videos yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
+            HorizontalDivider()
+            Text(if (de) "Notizen" else "Notes", style = MaterialTheme.typography.titleLarge)
+            Text(move.notes.ifBlank { if (de) "Noch keine Notizen zu dieser Übung." else "No notes for this exercise yet." }, style = MaterialTheme.typography.bodyLarge)
+            if (onEdit != null) OutlinedButton(onClick = { onEdit(ExerciseSection.NOTES) }) {
+                Text(if (de) { if (move.notes.isBlank()) "Notiz hinzufügen" else "Notizen bearbeiten" }
+                    else { if (move.notes.isBlank()) "Add note" else "Edit notes" })
+            }
         }
     }
 }

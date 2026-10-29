@@ -162,11 +162,11 @@ class PreferencesRepository(private val context: Context) {
     }
 
     /** One transaction: readers never observe half-saved exercise details. */
-    suspend fun saveExercise(move: Move, audioUri: String?) {
+    suspend fun saveExercise(move: Move, audioUri: String?, section: ExerciseSection? = null) {
         require(move.displayName.isNotBlank())
         val obsolete = mutableSetOf<String>()
         context.dataStore.edit { prefs ->
-            if (move.id.startsWith("custom_")) {
+            if (move.id.startsWith("custom_") && (section == null || section == ExerciseSection.DATA)) {
                 val custom = prefs[CUSTOM_MOVES_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
                 custom.add("${move.id}|v2:${android.net.Uri.encode(move.displayName)}|${move.category.name}")
                 prefs[CUSTOM_MOVES_KEY] = custom
@@ -174,19 +174,27 @@ class PreferencesRepository(private val context: Context) {
             val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
             obsolete.addAll(ownedAttachmentPaths(details.optJSONObject(move.id)))
             obsolete.addAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty().filter { it.startsWith("${move.id}|") }))
+            // Patch only the edited section inside this transaction. Other sections may
+            // have changed since the draft was opened (e.g. a slow repository emission).
+            val previous = details.optJSONObject(move.id)
             details.put(move.id, JSONObject().apply {
-                put("description", (DEFAULT_MOVES.find { it.id == move.id } ?: move).description ?: JSONObject.NULL)
-                put("imagePath", move.imagePath ?: JSONObject.NULL)
-                put("notes", move.notes)
-                put("media", JSONArray().apply {
+                put("description", if (section == null || section == ExerciseSection.DATA || previous?.has("description") != true)
+                    (DEFAULT_MOVES.find { it.id == move.id } ?: move).description ?: JSONObject.NULL else previous.get("description"))
+                put("imagePath", if (section == null) move.imagePath ?: JSONObject.NULL else if (section == ExerciseSection.MEDIA) JSONObject.NULL else previous?.opt("imagePath") ?: move.imagePath ?: JSONObject.NULL)
+                put("notes", if (section == null || section == ExerciseSection.NOTES) move.notes else previous?.optString("notes", move.notes) ?: move.notes)
+                val attachments = JSONArray().apply {
                     move.media.forEach { item -> put(JSONObject().put("path", item.path).put("kind", item.kind.name)) }
-                })
+                }
+                put("media", if (section == null || section == ExerciseSection.MEDIA) attachments else previous?.optJSONArray("media") ?: attachments)
             })
             prefs[MOVE_DETAILS_JSON] = details.toString()
             excludeReferencedPaths(obsolete, details)
-            val audio = prefs[STRING_SET_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
-            audioUri?.let { audio.add("${move.id}|$it") }
-            prefs[STRING_SET_KEY] = audio
+            val audio = prefs[STRING_SET_KEY].orEmpty().toMutableSet()
+            if (section == null || section == ExerciseSection.AUDIO) {
+                audio.removeAll { it.startsWith("${move.id}|") }
+                audioUri?.let { audio.add("${move.id}|$it") }
+                prefs[STRING_SET_KEY] = audio
+            }
             obsolete.removeAll(ownedAudioPaths(audio).toSet())
         }
         deleteOwnedAttachments(obsolete)

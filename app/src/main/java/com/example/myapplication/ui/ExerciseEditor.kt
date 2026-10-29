@@ -48,10 +48,14 @@ fun ExerciseEditor(
     onPreview: (Move, String?) -> Unit,
     onDelete: (String, () -> Unit, () -> Unit) -> Unit,
     onBack: () -> Unit,
-    onDeleted: () -> Unit = onBack
+    onDeleted: () -> Unit = onBack,
+    section: ExerciseSection = ExerciseSection.DATA,
+    addMediaOnOpen: Boolean = false,
+    standardVoiceLabel: String? = null
 ) {
     // Keep the open draft stable while repository updates arrive, including deletion.
-    val move = remember(moveId) { allMoves.find { it.id == moveId } }
+    val available = allMoves.find { it.id == moveId }
+    val move = remember(moveId, available != null) { available }
     val context = LocalContext.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val s = LocalStrings.current
@@ -74,7 +78,6 @@ fun ExerciseEditor(
     var notes by rememberSaveable(moveId) { mutableStateOf(move.notes) }
     var media by rememberSaveable(moveId) { mutableStateOf(ArrayList(move.media)) }
     var audioUri by rememberSaveable(moveId) { mutableStateOf(overrideUri) }
-    var advanced by remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
@@ -89,8 +92,13 @@ fun ExerciseEditor(
     val stagedFiles = rememberSaveable(moveId, saver = listSaver<MutableList<File>, String>(
         save = { it.map(File::getAbsolutePath) }, restore = { it.map(::File).toMutableList() }
     )) { mutableListOf<File>() }
-    val draft = move.copy(displayName = title.trim(), category = category, description = if (custom) description else move.description, notes = notes, media = media)
-    val dirty = draft != (if (custom) baseline.copy(description = baseline.description.orEmpty()) else baseline) || audioUri != baselineAudio
+    val draft = when (section) {
+        ExerciseSection.DATA -> if (custom) move.copy(displayName = title.trim(), category = category, description = description) else move
+        ExerciseSection.NOTES -> move.copy(notes = notes)
+        ExerciseSection.MEDIA -> move.copy(media = media)
+        ExerciseSection.AUDIO -> move
+    }
+    val dirty = draft != (if (custom && section == ExerciseSection.DATA) baseline.copy(description = baseline.description.orEmpty()) else baseline) || audioUri != baselineAudio
     val back: () -> Unit = { if (!saving && !importing && !deleting) { if (dirty || recorder != null) confirmExit = true else onBack() } }
     BackHandler(onBack = back)
 
@@ -159,6 +167,13 @@ fun ExerciseEditor(
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { importMedia(listOf(it), false) }
     }
+    var initialPickerOpened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (section == ExerciseSection.MEDIA && addMediaOnOpen && !initialPickerOpened) {
+            initialPickerOpened = true
+            imagePicker.launch(arrayOf("image/*", "video/*"))
+        }
+    }
     val stopOnBackground by rememberUpdatedState { stopRecording() }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
@@ -175,7 +190,7 @@ fun ExerciseEditor(
             if ((owner as? android.app.Activity)?.isChangingConfigurations != true) stagedFiles.forEach { it.delete() }
         }
     }
-    fun save(leave: Boolean = false) {
+    fun save(leave: Boolean = true) {
         if (saving || importing || deleting || recorder != null || title.isBlank()) return
         confirmExit = false
         saving = true
@@ -195,17 +210,18 @@ fun ExerciseEditor(
     }
     Scaffold(
         modifier = Modifier.imePadding(),
-        topBar = { TopAppBar(title = { Text(if (custom) { if (de) "Eigene Übung" else "Custom exercise" } else move.displayName) },
+        topBar = { TopAppBar(title = { Text(exerciseSectionTitle(section, de)) },
             navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) } }) },
         bottomBar = {
-            Surface { Button(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && recorder == null,
+            Surface { Button(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && !importing && !deleting && recorder == null,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
                 Text(if (saving) { if (de) "Wird gespeichert …" else "Saving …" } else s.save)
             } }
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (custom) {
+            if (section != ExerciseSection.DATA) Text(move.displayName, style = MaterialTheme.typography.titleMedium)
+            if (section == ExerciseSection.DATA && custom) {
                 OutlinedTextField(value = title, onValueChange = { title = it; status(null) }, label = { Text(s.newMoveName) }, singleLine = true,
                     isError = title.isBlank(), supportingText = { if (title.isBlank()) Text(if (de) "Bitte gib der Übung einen Namen." else "Please name this exercise.") }, modifier = Modifier.fillMaxWidth())
                 val categoryChoices: @Composable () -> Unit = {
@@ -220,11 +236,11 @@ fun ExerciseEditor(
                         Column { categoryChoices() }
                     } else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { categoryChoices() }
                 }
-            } else Text(if (de) "Die Originalbeschreibung und historischen Quellen sind geschützt. Hier bearbeitest du nur deine Ergänzungen." else "The original description and historical sources are protected. Only your personal additions can be edited here.", style = MaterialTheme.typography.bodyMedium)
-            if (custom) OutlinedTextField(value = description, onValueChange = { description = it; status(null) }, label = { Text(s.descriptionFieldLabel) }, minLines = 3, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = notes, onValueChange = { notes = it; status(null) },
-                label = { Text(if (de) "Meine Notizen" else "My notes") }, minLines = 3, modifier = Modifier.fillMaxWidth())
-            Text(if (de) "Meine Bilder und Videos" else "My images and videos", style = MaterialTheme.typography.titleMedium)
+            }
+            if (section == ExerciseSection.DATA && custom) OutlinedTextField(value = description, onValueChange = { description = it; status(null) }, label = { Text(s.descriptionFieldLabel) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            if (section == ExerciseSection.NOTES) OutlinedTextField(value = notes, onValueChange = { notes = it; status(null) },
+                label = { Text(if (de) "Notizen" else "Notes") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            if (section == ExerciseSection.MEDIA) {
             Text(if (de) "Bilder, animierte GIFs und Videos · bis 200 MB pro Datei. Kopien werden in der App gespeichert." else "Images, animated GIFs and videos · up to 200 MB per file. Copies are stored in the app.", style = MaterialTheme.typography.bodySmall)
             media.forEachIndexed { index, item ->
                 key(item.path) {
@@ -236,24 +252,26 @@ fun ExerciseEditor(
             }
             OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*", "video/*")) }, enabled = recorder == null && !importing,
                 modifier = Modifier.fillMaxWidth()) { Text(if (de) "Bilder / Videos hinzufügen" else "Add images / videos") }
-            OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = title.isNotBlank() && recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.testPlayback) }
-            Text(if (audioUri == null) s.defaultAudioEnabled else s.customAudioEnabled, style = MaterialTheme.typography.bodySmall)
-            message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (advanced) { if (de) "Audio schließen" else "Hide audio" } else { if (de) "Eigene Ansage anpassen" else "Customize personal call" })
             }
-            if (advanced) {
-                Text(s.audio, style = MaterialTheme.typography.titleMedium)
+            if (section == ExerciseSection.AUDIO) {
+                Text(if (audioUri == null) (standardVoiceLabel ?: if (de) "Standardstimme" else "Default voice") else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording",
+                    style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (de) "Ansage anhören" else "Listen to call")
+                }
+                TextButton(onClick = { audioUri = null; status(null) }, enabled = audioUri != null && recorder == null) {
+                    Text(if (de) "Standardstimme verwenden" else "Use default voice")
+                }
                 Button(onClick = {
                     if (recorder != null) stopRecording()
                     else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording()
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (recorder != null) s.stopRecording else s.newRecording) }
                 OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
-                TextButton(onClick = { audioUri = null; status(null) }, enabled = audioUri != null && recorder == null) { Text(s.resetToDefault) }
             }
-            if (custom) TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
+            message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+            if (section == ExerciseSection.DATA && custom) TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
         }
     }
     if (saving) AlertDialog(onDismissRequest = {}, title = { Text(if (de) "Wird gespeichert …" else "Saving …") },
@@ -262,9 +280,12 @@ fun ExerciseEditor(
         text = { CircularProgressIndicator() }, confirmButton = {})
     if (confirmExit) AlertDialog(onDismissRequest = { confirmExit = false },
         title = { Text(if (de) "Änderungen speichern?" else "Save changes?") },
-        text = { Text(if (recorder != null) { if (de) "Beende zuerst die Aufnahme, um sie zu speichern." else "Stop recording before saving." } else { if (de) "Notizen, Medien und Audio werden gemeinsam gespeichert." else "Notes, media and audio are saved together." }) },
+        text = { Text(if (recorder != null) { if (de) "Beende zuerst die Aufnahme, um sie zu speichern." else "Stop recording before saving." } else { if (de) "Deine Änderungen in diesem Bereich sind noch nicht gespeichert." else "Your changes in this section have not been saved yet." }) },
         confirmButton = { TextButton(enabled = title.isNotBlank() && recorder == null && !saving, onClick = { save(true) }) { Text(s.save) } },
-        dismissButton = { TextButton(enabled = !saving, onClick = { stopRecording(true); confirmExit = false; onBack() }) { Text(if (de) "Verwerfen" else "Discard") } })
+        dismissButton = { Column {
+            TextButton(enabled = !saving, onClick = { stopRecording(true); confirmExit = false; onBack() }) { Text(if (de) "Verwerfen" else "Discard") }
+            TextButton(enabled = !saving, onClick = { confirmExit = false }) { Text(if (de) "Weiter bearbeiten" else "Continue editing") }
+        } })
     if (confirmDelete) {
         val affected = savedPresets.filter { moveId in it.preset.selectedMoveIds }
         AlertDialog(onDismissRequest = { if (!deleting) confirmDelete = false }, title = { Text(s.deleteMoveTitle) },
@@ -279,4 +300,11 @@ fun ExerciseEditor(
             }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete, color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(enabled = !deleting, onClick = { confirmDelete = false; deleteError = false }) { Text(s.cancel) } })
     }
+}
+
+fun exerciseSectionTitle(section: ExerciseSection, de: Boolean): String = when (section) {
+    ExerciseSection.DATA -> if (de) "Übungsdaten bearbeiten" else "Edit exercise details"
+    ExerciseSection.NOTES -> if (de) "Notizen bearbeiten" else "Edit notes"
+    ExerciseSection.MEDIA -> if (de) "Bilder & Videos" else "Images & videos"
+    ExerciseSection.AUDIO -> if (de) "Ansage ändern" else "Change call"
 }
