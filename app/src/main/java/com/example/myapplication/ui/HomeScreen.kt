@@ -1,5 +1,7 @@
 package com.example.myapplication.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -66,12 +68,13 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(top = 48.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -250,7 +253,7 @@ private fun QuickstartButton(
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -259,7 +262,7 @@ private fun QuickstartButton(
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     ),
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -306,6 +309,8 @@ private fun CurrentSessionCard(
                 SessionStat(value = preset.unitsPerRound.toString(), label = LocalStrings.current.callsRound)
                 SessionStat(value = preset.selectedMoveIds.size.toString(), label = LocalStrings.current.moves)
             }
+            Text((if (LocalStrings.current === StringsDe) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s", style = MaterialTheme.typography.bodyMedium, color = HaulaufTextSecondary)
+            if (selectedMoveNames.isEmpty()) Text(if (LocalStrings.current === StringsDe) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
             if (selectedMoveNames.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(

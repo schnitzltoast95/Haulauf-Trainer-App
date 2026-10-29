@@ -18,7 +18,7 @@ data class TrainingPreset(
     val volumeCall: Float = 1f,
     val volumeBeep: Float = 0.75f,
     val volumeTick: Float = 0.25f,
-) {
+) : java.io.Serializable {
     val totalUnits: Int get() = rounds * unitsPerRound
 
     fun estimatedDurationSeconds(): Long {

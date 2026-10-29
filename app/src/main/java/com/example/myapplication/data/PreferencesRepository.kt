@@ -26,9 +26,7 @@ class PreferencesRepository(private val context: Context) {
                 reactionIntervalMinMs = prefs[REACTION_MIN_MS],
                 reactionIntervalMaxMs = prefs[REACTION_MAX_MS],
                 pauseBetweenRoundsMs = prefs[PAUSE_MS] ?: 10000L,
-                selectedMoveIds = (prefs[SELECTED_MOVES] ?: emptySet()).ifEmpty {
-                    DEFAULT_MOVES.map { it.id }.toSet()
-                },
+                selectedMoveIds = prefs[SELECTED_MOVES] ?: DEFAULT_MOVES.map { it.id }.toSet(),
                 endBeepEnabled = prefs[END_BEEP_ENABLED] ?: true,
                 metronomeEnabled = prefs[METRONOME_ENABLED] ?: false,
                 metronomeBeatIntervalMs = normalizeMetronomeBeats(prefs[METRONOME_INTERVAL_MS]),
@@ -58,7 +56,7 @@ class PreferencesRepository(private val context: Context) {
                 parts.size >= 3 -> {
                     val cat = try { MoveCategory.valueOf(parts[2]) } catch (_: Exception) { MoveCategory.HAU }
                     val info = moveInfoMap[parts[0]]
-                    Move(parts[0], parts[1], cat, info?.first, info?.second)
+                    Move(parts[0], if (parts[1].startsWith("v2:")) android.net.Uri.decode(parts[1].removePrefix("v2:")) else parts[1], cat, info?.first, info?.second)
                 }
                 parts.size == 2 -> {
                     val info = moveInfoMap[parts[0]]
@@ -126,17 +124,68 @@ class PreferencesRepository(private val context: Context) {
         val move = Move(id, displayName.trim(), category)
         context.dataStore.edit { prefs ->
             val current = prefs[CUSTOM_MOVES_KEY]?.toMutableSet() ?: mutableSetOf()
-            current.add("${move.id}|${move.displayName}|${move.category.name}")
+            current.add("${move.id}|v2:${android.net.Uri.encode(move.displayName)}|${move.category.name}")
             prefs[CUSTOM_MOVES_KEY] = current
         }
         return move
     }
 
     suspend fun removeCustomMove(moveId: String) {
+        require(moveId.startsWith("custom_"))
         context.dataStore.edit { prefs ->
-            val current = prefs[CUSTOM_MOVES_KEY]?.toMutableSet() ?: mutableSetOf()
-            current.removeAll { it.startsWith("$moveId|") }
-            prefs[CUSTOM_MOVES_KEY] = current
+            for (key in listOf(CUSTOM_MOVES_KEY, MOVE_INFO_KEY, STRING_SET_KEY)) {
+                prefs[key] = prefs[key].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
+            }
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            details.remove(moveId)
+            prefs[MOVE_DETAILS_JSON] = details.toString()
+            prefs[SELECTED_MOVES]?.let { prefs[SELECTED_MOVES] = it - moveId }
+            prefs[MOVE_PRIORITIES] = prefs[MOVE_PRIORITIES].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
+            val templates = JSONArray(prefs[SAVED_PRESETS_KEY] ?: "[]")
+            for (i in 0 until templates.length()) {
+                val template = templates.getJSONObject(i).getJSONObject("preset")
+                val ids = template.getJSONArray("selectedMoveIds")
+                template.put("selectedMoveIds", JSONArray((0 until ids.length()).map { ids.getString(it) }.filterNot { it == moveId }))
+                template.optJSONObject("movePriorities")?.remove(moveId)
+            }
+            prefs[SAVED_PRESETS_KEY] = templates.toString()
+        }
+    }
+
+    /** One transaction: readers never observe half-saved exercise details. */
+    suspend fun saveExercise(move: Move, audioUri: String?) {
+        require(move.displayName.isNotBlank())
+        context.dataStore.edit { prefs ->
+            if (move.id.startsWith("custom_")) {
+                val custom = prefs[CUSTOM_MOVES_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
+                custom.add("${move.id}|v2:${android.net.Uri.encode(move.displayName)}|${move.category.name}")
+                prefs[CUSTOM_MOVES_KEY] = custom
+            }
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            details.put(move.id, JSONObject().apply {
+                put("description", move.description ?: JSONObject.NULL)
+                put("imagePath", move.imagePath ?: JSONObject.NULL)
+            })
+            prefs[MOVE_DETAILS_JSON] = details.toString()
+            val audio = prefs[STRING_SET_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
+            audioUri?.let { audio.add("${move.id}|$it") }
+            prefs[STRING_SET_KEY] = audio
+        }
+    }
+
+    val globalAudio: Flow<AudioLevels?> = context.dataStore.data.map { prefs ->
+        prefs[GLOBAL_AUDIO]?.let { raw ->
+            val obj = JSONObject(raw)
+            AudioLevels(obj.getDouble("call").toFloat(), obj.getDouble("beep").toFloat(), obj.getDouble("tick").toFloat())
+        }
+    }
+
+    suspend fun saveGlobalAudio(levels: AudioLevels?) {
+        context.dataStore.edit { prefs ->
+            if (levels == null) prefs.remove(GLOBAL_AUDIO)
+            else prefs[GLOBAL_AUDIO] = JSONObject().apply {
+                put("call", levels.call.toDouble()); put("beep", levels.beep.toDouble()); put("tick", levels.tick.toDouble())
+            }.toString()
         }
     }
 
@@ -232,7 +281,14 @@ class PreferencesRepository(private val context: Context) {
                 val imagePath = if (parts.size >= 3 && parts[2].isNotEmpty()) parts[2] else null
                 parts[0] to (description to imagePath)
             } else null
-        }?.toMap() ?: emptyMap()
+        }?.toMap().orEmpty().toMutableMap().apply {
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            details.keys().forEach { id ->
+                val item = details.getJSONObject(id)
+                put(id, (if (item.isNull("description")) null else item.getString("description")) to
+                    (if (item.isNull("imagePath")) null else item.getString("imagePath")))
+            }
+        }
     }
 
     suspend fun savePreset(savedPreset: SavedPreset) {
@@ -287,6 +343,18 @@ class PreferencesRepository(private val context: Context) {
             }
             newArray.put(savedPresetJson)
             prefs[SAVED_PRESETS_KEY] = newArray.toString()
+        }
+    }
+
+    suspend fun renamePreset(presetId: String, name: String) {
+        require(name.isNotBlank())
+        context.dataStore.edit { prefs ->
+            val current = JSONArray(prefs[SAVED_PRESETS_KEY] ?: "[]")
+            val item = (0 until current.length()).map { current.getJSONObject(it) }
+                .firstOrNull { it.getString("id") == presetId }
+                ?: error("Training no longer exists")
+            item.put("name", name.trim())
+            prefs[SAVED_PRESETS_KEY] = current.toString()
         }
     }
 
@@ -348,6 +416,8 @@ class PreferencesRepository(private val context: Context) {
     }
 
     companion object {
+        private val MOVE_DETAILS_JSON = stringPreferencesKey("move_details_v2")
+        private val GLOBAL_AUDIO = stringPreferencesKey("global_audio_v1")
         private val ROUNDS = intPreferencesKey("rounds")
         private val UNITS_PER_ROUND = intPreferencesKey("units_per_round")
         private val REACTION_INTERVAL_MS = longPreferencesKey("reaction_interval_ms")
