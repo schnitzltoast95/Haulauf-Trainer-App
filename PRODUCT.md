@@ -54,8 +54,8 @@ Erfolg bedeutet, eine konfigurierte Einheit anhand hörbarer Ansagen absolvieren
 - Im laufenden Training ist Pause die dominante, große Aktion. Fortsetzen und Beenden folgen im pausierten Zustand.
 - Die nächste Einheit, gespeicherte Trainingsvorlagen und die Übungsbibliothek sind getrennte Konzepte.
 - Gespeicherte Trainings können gestartet, bearbeitet, kopiert, umbenannt und gelöscht werden. Änderungen benötigen explizites Speichern; ein einmaliger Start verändert die Vorlage nicht.
-- Übungsdetails, Audio und Bild werden als gemeinsamer Entwurf bearbeitet und gemeinsam gespeichert oder verworfen. Neue eigene Übungen benötigen zunächst Name und Kategorie.
-- Eigene Anpassungen an Standardübungen sind wiederherstellbar; historische Quellen und die Kennzeichnung moderner Stichübungen bleiben erhalten.
+- Übungsdetails werden zunächst lesend geöffnet. Eigene Übungsinhalte, Notizen, Medien und Audio werden in einer getrennten Bearbeitungsansicht als gemeinsamer Entwurf gespeichert oder verworfen. Neue eigene Übungen benötigen zunächst Name und Kategorie.
+- Standardübungen sind unveränderlich. Eigene Notizen, mehrere Bilder, animierte GIFs, Videos und eine persönliche Audioansage ergänzen sie getrennt vom Original. Frühere Beschreibungsanpassungen werden als persönliche Notizen übernommen; historische Quellen und die Kennzeichnung moderner Stichübungen bleiben erhalten.
 - Vor dem Löschen eigener Übungen werden betroffene Trainings genannt; Verweise werden bereinigt. Leere Trainings bleiben erhalten und bieten eine Korrekturmöglichkeit.
 - Sprache, Stimme und gemeinsame Audiopegel gehören zu den App-Einstellungen; Endton, Metronom und Countdown zum Training. Alte gespeicherte Pegel dürfen durch die Umstellung nicht stillschweigend verloren gehen.
 

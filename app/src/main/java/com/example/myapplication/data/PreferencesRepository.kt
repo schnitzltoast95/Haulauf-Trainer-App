@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -132,13 +135,18 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun removeCustomMove(moveId: String) {
         require(moveId.startsWith("custom_"))
+        val obsolete = mutableSetOf<String>()
         context.dataStore.edit { prefs ->
+            obsolete.addAll(ownedAttachmentPaths(JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}").optJSONObject(moveId)))
+            obsolete.addAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty().filter { it.startsWith("$moveId|") }))
             for (key in listOf(CUSTOM_MOVES_KEY, MOVE_INFO_KEY, STRING_SET_KEY)) {
                 prefs[key] = prefs[key].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
             }
             val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
             details.remove(moveId)
             prefs[MOVE_DETAILS_JSON] = details.toString()
+            excludeReferencedPaths(obsolete, details)
+            obsolete.removeAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty()).toSet())
             prefs[SELECTED_MOVES]?.let { prefs[SELECTED_MOVES] = it - moveId }
             prefs[MOVE_PRIORITIES] = prefs[MOVE_PRIORITIES].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
             val templates = JSONArray(prefs[SAVED_PRESETS_KEY] ?: "[]")
@@ -150,11 +158,13 @@ class PreferencesRepository(private val context: Context) {
             }
             prefs[SAVED_PRESETS_KEY] = templates.toString()
         }
+        deleteOwnedAttachments(obsolete)
     }
 
     /** One transaction: readers never observe half-saved exercise details. */
     suspend fun saveExercise(move: Move, audioUri: String?) {
         require(move.displayName.isNotBlank())
+        val obsolete = mutableSetOf<String>()
         context.dataStore.edit { prefs ->
             if (move.id.startsWith("custom_")) {
                 val custom = prefs[CUSTOM_MOVES_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
@@ -162,14 +172,66 @@ class PreferencesRepository(private val context: Context) {
                 prefs[CUSTOM_MOVES_KEY] = custom
             }
             val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            obsolete.addAll(ownedAttachmentPaths(details.optJSONObject(move.id)))
+            obsolete.addAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty().filter { it.startsWith("${move.id}|") }))
             details.put(move.id, JSONObject().apply {
-                put("description", move.description ?: JSONObject.NULL)
+                put("description", (DEFAULT_MOVES.find { it.id == move.id } ?: move).description ?: JSONObject.NULL)
                 put("imagePath", move.imagePath ?: JSONObject.NULL)
+                put("notes", move.notes)
+                put("media", JSONArray().apply {
+                    move.media.forEach { item -> put(JSONObject().put("path", item.path).put("kind", item.kind.name)) }
+                })
             })
             prefs[MOVE_DETAILS_JSON] = details.toString()
+            excludeReferencedPaths(obsolete, details)
             val audio = prefs[STRING_SET_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
             audioUri?.let { audio.add("${move.id}|$it") }
             prefs[STRING_SET_KEY] = audio
+            obsolete.removeAll(ownedAudioPaths(audio).toSet())
+        }
+        deleteOwnedAttachments(obsolete)
+    }
+
+    private fun ownedAudioPaths(entries: Collection<String>): List<String> = entries.mapNotNull { entry ->
+        val uri = android.net.Uri.parse(entry.substringAfter('|', ""))
+        if (uri.scheme == "file") uri.path else null
+    }
+
+    private fun ownedAttachmentPaths(item: JSONObject?): List<String> {
+        if (item == null) return emptyList()
+        val media = item.optJSONArray("media") ?: JSONArray()
+        return listOfNotNull(item.optString("imagePath", "").takeIf { it.isNotBlank() }) +
+            (0 until media.length()).mapNotNull { media.optJSONObject(it)?.optString("path") }
+    }
+
+    private fun excludeReferencedPaths(obsolete: MutableSet<String>, details: JSONObject) {
+        details.keys().forEach { id -> obsolete.removeAll(ownedAttachmentPaths(details.optJSONObject(id)).toSet()) }
+    }
+
+    private suspend fun deleteOwnedAttachments(paths: Set<String>) = withContext(Dispatchers.IO) {
+        val directory = File(context.filesDir, "exercise-media").canonicalFile
+        paths.forEach { path ->
+            // Never remove external legacy documents or files outside the app's media directory.
+            runCatching { File(path).canonicalFile.takeIf { it.parentFile == directory }?.delete() }
+        }
+    }
+
+    val exerciseAdditions: Flow<Map<String, ExerciseAdditions>> = context.dataStore.data.map { prefs ->
+        val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+        buildMap {
+            details.keys().forEach { id ->
+                val item = details.getJSONObject(id)
+                // Missing means legacy data: retain its old description and image through migration.
+                if (item.has("notes")) {
+                    val media = item.optJSONArray("media") ?: JSONArray()
+                    put(id, ExerciseAdditions(item.optString("notes", ""), (0 until media.length()).mapNotNull { index ->
+                        val attachment = media.optJSONObject(index) ?: return@mapNotNull null
+                        val path = attachment.optString("path", "")
+                        val kind = runCatching { ExerciseMediaKind.valueOf(attachment.optString("kind", "IMAGE")) }.getOrNull()
+                        if (path.isBlank() || kind == null) null else ExerciseMedia(path, kind)
+                    }))
+                }
+            }
         }
     }
 

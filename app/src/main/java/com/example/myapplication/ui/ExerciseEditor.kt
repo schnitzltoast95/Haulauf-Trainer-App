@@ -47,7 +47,8 @@ fun ExerciseEditor(
     onSave: (Move, String?, () -> Unit, () -> Unit) -> Unit,
     onPreview: (Move, String?) -> Unit,
     onDelete: (String, () -> Unit, () -> Unit) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDeleted: () -> Unit = onBack
 ) {
     // Keep the open draft stable while repository updates arrive, including deletion.
     val move = remember(moveId) { allMoves.find { it.id == moveId } }
@@ -70,7 +71,8 @@ fun ExerciseEditor(
     var title by rememberSaveable(moveId) { mutableStateOf(move.displayName) }
     var category by rememberSaveable(moveId) { mutableStateOf(move.category) }
     var description by rememberSaveable(moveId) { mutableStateOf(move.description.orEmpty()) }
-    var imagePath by rememberSaveable(moveId) { mutableStateOf(move.imagePath) }
+    var notes by rememberSaveable(moveId) { mutableStateOf(move.notes) }
+    var media by rememberSaveable(moveId) { mutableStateOf(ArrayList(move.media)) }
     var audioUri by rememberSaveable(moveId) { mutableStateOf(overrideUri) }
     var advanced by remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
@@ -87,9 +89,8 @@ fun ExerciseEditor(
     val stagedFiles = rememberSaveable(moveId, saver = listSaver<MutableList<File>, String>(
         save = { it.map(File::getAbsolutePath) }, restore = { it.map(::File).toMutableList() }
     )) { mutableListOf<File>() }
-    val draft = move.copy(displayName = title.trim(), category = category, description = description, imagePath = imagePath)
-    val dirty = draft != baseline.copy(description = baseline.description.orEmpty()) || audioUri != baselineAudio
-    val imageModel = moveImageModel(context, imagePath, move.historicalImageRes)
+    val draft = move.copy(displayName = title.trim(), category = category, description = if (custom) description else move.description, notes = notes, media = media)
+    val dirty = draft != (if (custom) baseline.copy(description = baseline.description.orEmpty()) else baseline) || audioUri != baselineAudio
     val back: () -> Unit = { if (!saving && !importing && !deleting) { if (dirty || recorder != null) confirmExit = true else onBack() } }
     BackHandler(onBack = back)
 
@@ -134,54 +135,30 @@ fun ExerciseEditor(
         if (granted) startRecording()
         else status(if (de) "Mikrofon nicht freigegeben. Du kannst eine Audiodatei wählen." else "Microphone permission denied. You can choose an audio file.", true)
     }
-    fun importMedia(uri: Uri, image: Boolean) {
+    fun importMedia(uris: List<Uri>, visual: Boolean) {
         importing = true
         scope.launch {
-            val dir = File(context.filesDir, "exercise-media").apply { mkdirs() }
-            val file = File(dir, UUID.randomUUID().toString())
             try {
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri).use { input ->
-                        requireNotNull(input)
-                        file.outputStream().use { output ->
-                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                            while (true) {
-                                coroutineContext.ensureActive()
-                                val count = input.read(buffer)
-                                if (count < 0) break
-                                output.write(buffer, 0, count)
-                            }
-                        }
-                    }
-                    require(file.length() > 0)
-                    if (image) {
-                        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                        android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
-                        require(bounds.outWidth > 0 && bounds.outHeight > 0)
-                    } else {
-                        val metadata = android.media.MediaMetadataRetriever()
-                        try {
-                            metadata.setDataSource(file.absolutePath)
-                            require(metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes")
-                        } finally { metadata.release() }
-                    }
+                for (uri in uris) {
+                    val imported = importExerciseMedia(context, uri, visual)
+                    stagedFiles.add(File(imported.path))
+                    if (visual) media = ArrayList(media + imported)
+                    else audioUri = Uri.fromFile(File(imported.path)).toString()
                 }
-                stagedFiles.add(file)
-                if (image) imagePath = file.absolutePath else audioUri = Uri.fromFile(file).toString()
                 status(if (de) "Ausgewählt – noch nicht gespeichert." else "Selected – not saved yet.")
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                file.delete()
                 throw cancelled
             } catch (_: Exception) {
-                file.delete()
-                status(if (de) "Datei nicht lesbar oder Format nicht unterstützt. Bitte eine andere Datei wählen." else "File unreadable or format unsupported. Please choose another file.", true)
-            } finally {
-                importing = false
-            }
+                status(if (de) "Datei nicht lesbar, zu groß (max. 200 MB) oder Format nicht unterstützt. Bereits geladene Dateien bleiben im Entwurf." else "File unreadable, too large (max. 200 MB), or unsupported. Previously loaded files remain in the draft.", true)
+            } finally { importing = false }
         }
     }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { importMedia(it, true) } }
-    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { importMedia(it, false) } }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) importMedia(uris, true)
+    }
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { importMedia(listOf(it), false) }
+    }
     val stopOnBackground by rememberUpdatedState { stopRecording() }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
@@ -204,7 +181,7 @@ fun ExerciseEditor(
         saving = true
         onSave(draft, audioUri, {
             saving = false
-            val kept = setOf(imagePath, audioUri?.let { it.toUri().path })
+            val kept = media.map { it.path }.toSet() + audioUri?.let { it.toUri().path }
             stagedFiles.filter { it.absolutePath !in kept }.forEach { it.delete() }
             stagedFiles.clear()
             focus.clearFocus()
@@ -243,14 +220,28 @@ fun ExerciseEditor(
                         Column { categoryChoices() }
                     } else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { categoryChoices() }
                 }
-            } else Text(if (de) "Standardübung · eigene Anpassungen sind wiederherstellbar" else "Standard exercise · customizations can be reset", style = MaterialTheme.typography.bodyMedium)
-            OutlinedTextField(value = description, onValueChange = { description = it; status(null) }, label = { Text(s.descriptionFieldLabel) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            } else Text(if (de) "Die Originalbeschreibung und historischen Quellen sind geschützt. Hier bearbeitest du nur deine Ergänzungen." else "The original description and historical sources are protected. Only your personal additions can be edited here.", style = MaterialTheme.typography.bodyMedium)
+            if (custom) OutlinedTextField(value = description, onValueChange = { description = it; status(null) }, label = { Text(s.descriptionFieldLabel) }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = notes, onValueChange = { notes = it; status(null) },
+                label = { Text(if (de) "Meine Notizen" else "My notes") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+            Text(if (de) "Meine Bilder und Videos" else "My images and videos", style = MaterialTheme.typography.titleMedium)
+            Text(if (de) "Bilder, animierte GIFs und Videos · bis 200 MB pro Datei. Kopien werden in der App gespeichert." else "Images, animated GIFs and videos · up to 200 MB per file. Copies are stored in the app.", style = MaterialTheme.typography.bodySmall)
+            media.forEachIndexed { index, item ->
+                key(item.path) {
+                    ExerciseMediaPreview(item, index + 1)
+                    TextButton(onClick = { media = ArrayList(media.filterNot { it.path == item.path }); status(null) }) {
+                        Text(if (de) "Medium ${index + 1} entfernen" else "Remove media ${index + 1}")
+                    }
+                }
+            }
+            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*", "video/*")) }, enabled = recorder == null && !importing,
+                modifier = Modifier.fillMaxWidth()) { Text(if (de) "Bilder / Videos hinzufügen" else "Add images / videos") }
             OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = title.isNotBlank() && recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.testPlayback) }
             Text(if (audioUri == null) s.defaultAudioEnabled else s.customAudioEnabled, style = MaterialTheme.typography.bodySmall)
             message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (advanced) { if (de) "Medien schließen" else "Hide media" } else { if (de) "Audio und Bild anpassen" else "Customize audio and image" })
+                Text(if (advanced) { if (de) "Audio schließen" else "Hide audio" } else { if (de) "Eigene Ansage anpassen" else "Customize personal call" })
             }
             if (advanced) {
                 Text(s.audio, style = MaterialTheme.typography.titleMedium)
@@ -261,17 +252,8 @@ fun ExerciseEditor(
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (recorder != null) s.stopRecording else s.newRecording) }
                 OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
                 TextButton(onClick = { audioUri = null; status(null) }, enabled = audioUri != null && recorder == null) { Text(s.resetToDefault) }
-                if (imageModel != null) AsyncImage(imageModel, s.image, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp))
-                OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseImage) }
-                if (imagePath != null) TextButton(onClick = { imagePath = null; status(null) }) { Text(s.removeImage) }
             }
-            MoveHistoricalAttribution(move, showingHistoricalImage = advanced && imageModel != null && imageModel == move.historicalImageRes)
-            if (!custom) TextButton(onClick = {
-                val original = DEFAULT_MOVES.first { it.id == moveId }
-                description = original.description.orEmpty(); imagePath = null; audioUri = null
-                status(if (de) "Original vorbereitet. Mit Speichern übernehmen." else "Original restored in draft. Save to apply.")
-            }) { Text(if (de) "Original wiederherstellen" else "Restore original") }
-            else TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
+            if (custom) TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
         }
     }
     if (saving) AlertDialog(onDismissRequest = {}, title = { Text(if (de) "Wird gespeichert …" else "Saving …") },
@@ -280,7 +262,7 @@ fun ExerciseEditor(
         text = { CircularProgressIndicator() }, confirmButton = {})
     if (confirmExit) AlertDialog(onDismissRequest = { confirmExit = false },
         title = { Text(if (de) "Änderungen speichern?" else "Save changes?") },
-        text = { Text(if (recorder != null) { if (de) "Beende zuerst die Aufnahme, um sie zu speichern." else "Stop recording before saving." } else { if (de) "Text, Bild und Audio werden gemeinsam gespeichert." else "Text, image and audio are saved together." }) },
+        text = { Text(if (recorder != null) { if (de) "Beende zuerst die Aufnahme, um sie zu speichern." else "Stop recording before saving." } else { if (de) "Notizen, Medien und Audio werden gemeinsam gespeichert." else "Notes, media and audio are saved together." }) },
         confirmButton = { TextButton(enabled = title.isNotBlank() && recorder == null && !saving, onClick = { save(true) }) { Text(s.save) } },
         dismissButton = { TextButton(enabled = !saving, onClick = { stopRecording(true); confirmExit = false; onBack() }) { Text(if (de) "Verwerfen" else "Discard") } })
     if (confirmDelete) {
@@ -293,7 +275,7 @@ fun ExerciseEditor(
             } },
             confirmButton = { TextButton(enabled = !deleting, onClick = {
                 deleting = true; deleteError = false
-                onDelete(moveId, { deleting = false; confirmDelete = false; onBack() }, { deleting = false; deleteError = true })
+                onDelete(moveId, { deleting = false; confirmDelete = false; onDeleted() }, { deleting = false; deleteError = true })
             }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete, color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(enabled = !deleting, onClick = { confirmDelete = false; deleteError = false }) { Text(s.cancel) } })
     }

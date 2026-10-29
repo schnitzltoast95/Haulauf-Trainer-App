@@ -27,7 +27,28 @@ data class Move(
     val historicalTextSources: List<HistoricalTextSource> = emptyList(),
     val historicalNote: String? = null,
     val historicalContextOnly: Boolean = false,
+    val notes: String = "",
+    val media: List<ExerciseMedia> = emptyList(),
 ) : java.io.Serializable
+
+enum class ExerciseMediaKind { IMAGE, VIDEO }
+
+data class ExerciseMedia(val path: String, val kind: ExerciseMediaKind = ExerciseMediaKind.IMAGE) : java.io.Serializable
+
+data class ExerciseAdditions(val notes: String, val media: List<ExerciseMedia>)
+
+/** Old description overrides become personal notes; the supplied original is always authoritative. */
+fun Move.withPersonalContent(legacy: Pair<String?, String?>?, additions: ExerciseAdditions?): Move {
+    val original = DEFAULT_MOVES.find { it.id == id }
+    val base = original ?: copy(description = if (legacy != null) legacy.first else description)
+    val legacyNote = legacy?.first?.takeIf { original != null && it != original.description }.orEmpty()
+    val attachments = additions?.media ?: listOfNotNull(legacy?.second?.let { ExerciseMedia(it) })
+    return base.copy(
+        imagePath = null,
+        notes = additions?.notes ?: legacyNote,
+        media = attachments,
+    )
+}
 
 private fun meyerScanUrl(page: Int): String =
     "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00024580_${page.toString().padStart(5, '0')}/full/full/0/default.jpg"

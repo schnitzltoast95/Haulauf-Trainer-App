@@ -126,8 +126,16 @@ fun HaulaufApp(
                 onSave = viewModel::saveExercise,
                 onPreview = viewModel::previewExercise,
                 onDelete = viewModel::removeCustomMove,
+                onDeleted = { navController.popBackStack("move_audio_list", inclusive = false) },
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable("move_details/{moveId}", arguments = listOf(navArgument("moveId") { type = NavType.StringType })) { entry ->
+            val move = allMoves.find { it.id == entry.arguments?.getString("moveId") }
+            if (move != null) ExerciseDetailScreen(move,
+                onEdit = { navController.navigate("move_audio/${move.id}") },
+                onBack = { navController.popBackStack() })
         }
 
         composable("training") {
@@ -168,7 +176,7 @@ fun HaulaufApp(
                     viewModel.addCustomMove(name, category) { id -> navController.navigate("move_audio/$id") }
                 },
                 onTestMove = viewModel::testMoveAudio,
-                onOpenMoveDetails = { id -> navController.navigate("move_audio/$id") },
+                onOpenMoveDetails = { id -> navController.navigate("move_details/$id") },
                 onBack = { navController.popBackStack() }
             )
         }
