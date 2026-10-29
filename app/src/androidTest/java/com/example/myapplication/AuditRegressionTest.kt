@@ -292,4 +292,17 @@ class AuditRegressionTest {
         capture("audit-config-short")
     }
 
+    @Test fun homeStartHasFullHeightAndDefaultCountdownIsFiveSeconds() {
+        val preset = TrainingPreset()
+        assertEquals(5000L, preset.initialCountdownMs)
+        compose.setContent { MyApplicationTheme(darkTheme = true) {
+            CompositionLocalProvider(LocalStrings provides StringsDe) {
+                HomeScreen(preset, DEFAULT_MOVES, {}, {}, {}, {}, {}, {})
+            }
+        } }
+        compose.onNodeWithText(StringsDe.quickstart).assertHeightIsAtLeast(88.dp)
+        compose.onNodeWithText("Start in 5s", substring = true).assertExists()
+        capture("home-start-height")
+    }
+
 }

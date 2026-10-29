@@ -226,7 +226,7 @@ private fun QuickstartButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 64.dp),
+            .heightIn(min = 88.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent
@@ -239,7 +239,8 @@ private fun QuickstartButton(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .heightIn(min = 88.dp)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
