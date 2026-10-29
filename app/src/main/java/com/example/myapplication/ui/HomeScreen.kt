@@ -55,46 +55,29 @@ fun HomeScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        val viewportHeight = maxHeight
-        val compactHeader = maxWidth < 340.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
+        val viewportHeight = (maxHeight - 56.dp).coerceAtLeast(0.dp)
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = 56.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = viewportHeight)
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                    .padding(horizontal = 24.dp).padding(vertical = 24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    LogoSection()
-                    if (compactHeader) Spacer(Modifier.weight(1f))
-                    else Column(Modifier.weight(1f)) {
-                        Text(s.appName, style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold)
-                        Text(s.trainer, style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = s.settings)
-                    }
-                }
-                if (compactHeader) {
-                    Text(s.appName, modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(s.trainer, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
+                LogoSection()
+                Spacer(Modifier.height(12.dp))
+                Text(s.appName, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text(s.trainer, style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary)
                 Text(s.historicalSubtitle,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 32.dp),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 CurrentSessionCard(
@@ -110,6 +93,13 @@ fun HomeScreen(
                 )
             }
         }
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 16.dp)
+        ) {
+            Icon(Icons.Filled.Settings, contentDescription = s.settings)
+        }
+
     }
 }
 
@@ -178,7 +168,7 @@ private fun LogoSection() {
     val logoStroke = MaterialTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(80.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.verticalGradient(
@@ -187,7 +177,7 @@ private fun LogoSection() {
             ),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(36.dp)) {
+        Canvas(modifier = Modifier.size(48.dp)) {
             val strokeWidth = 4f
             val centerX = size.width / 2
             val centerY = size.height / 2
@@ -272,50 +262,44 @@ private fun CurrentSessionCard(
     onClick: () -> Unit,
     onStart: () -> Unit
 ) {
-    val durationStr = formatDuration(preset.estimatedDurationSeconds())
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            WrappingControls {
-                Text(
-                    text = LocalStrings.current.currentSession,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = onClick) {
-                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (LocalStrings.current === StringsDe) "Anpassen" else "Adjust")
-                }
-            }
-            Text("~$durationStr", style = MaterialTheme.typography.bodyMedium,
+    val s = LocalStrings.current
+    val de = s === StringsDe
+    val seconds = preset.estimatedDurationSeconds()
+    val duration = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(if (de) "Schnellstart" else "Quick start",
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(16.dp))
-            WrappingControls {
-                SessionStat(value = preset.rounds.toString(), label = LocalStrings.current.rounds)
-                SessionStat(value = preset.unitsPerRound.toString(), label = LocalStrings.current.callsRound)
-                SessionStat(value = preset.selectedMoveIds.size.toString(), label = LocalStrings.current.moves)
+            OutlinedButton(onClick = onClick, shape = MaterialTheme.shapes.medium) {
+                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (de) "Anpassen" else "Adjust")
             }
-            Text((if (LocalStrings.current === StringsDe) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (selectedMoveNames.isEmpty()) Text(if (LocalStrings.current === StringsDe) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
-            if (selectedMoveNames.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "${LocalStrings.current.moves}: ${selectedMoveNames.joinToString(", ")}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-            QuickstartButton(onClick = onStart, selectedMoveNames = selectedMoveNames)
-
         }
+        Spacer(Modifier.height(16.dp))
+        WrappingControls {
+            SessionStat(preset.rounds.toString(), s.rounds)
+            SessionStat(preset.unitsPerRound.toString(), s.callsRound)
+            SessionStat(duration, if (de) "Dauer (ca.)" else "Duration (approx.)")
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("${selectedMoveNames.size} ${s.moves} · " +
+            (if (de) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (selectedMoveNames.isEmpty()) {
+            Text(if (de) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
+        } else {
+            Text(selectedMoveNames.joinToString(", "),
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.height(24.dp))
+        QuickstartButton(onStart, selectedMoveNames)
     }
 }
 
