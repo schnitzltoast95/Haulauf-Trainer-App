@@ -6,6 +6,10 @@ import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Environment
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -83,15 +87,18 @@ fun MoveAudioListScreen(
     onBack: () -> Unit
 ) {
     val s = LocalStrings.current
-    val scrollState = rememberScrollState()
+    val scrollState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var newMoveName by remember { mutableStateOf("") }
-    var newMoveCategory by remember { mutableStateOf(MoveCategory.HAU) }
-    var categoryFilter by remember { mutableStateOf<MoveCategory?>(null) }
-    var query by remember { mutableStateOf("") }
-    var showAddMoveDialog by remember { mutableStateOf(false) }
+    var newMoveName by rememberSaveable { mutableStateOf("") }
+    var newMoveCategory by rememberSaveable { mutableStateOf(MoveCategory.HAU) }
+    var categoryFilter by rememberSaveable { mutableStateOf<MoveCategory?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var showAddMoveDialog by rememberSaveable { mutableStateOf(false) }
 
+    val visible = remember(allMoves, categoryFilter, query) {
+        allMoves.filter { (categoryFilter == null || it.category == categoryFilter) && it.displayName.contains(query, ignoreCase = true) }
+    }
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -102,7 +109,7 @@ fun MoveAudioListScreen(
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = s.back,
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -111,31 +118,33 @@ fun MoveAudioListScreen(
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = s.addMove,
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
+            state = scrollState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .verticalScroll(scrollState),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item(key = "controls") {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = s.customizeAudioDesc,
                 style = MaterialTheme.typography.bodySmall,
-                color = HaulaufTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
 
             OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
                 label = { Text(if (s === StringsDe) "Übung suchen" else "Search exercises") }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrappingControls {
                 listOf(null, MoveCategory.HAU, MoveCategory.HUT, MoveCategory.STICH).forEach { category ->
                     FilterChip(selected = categoryFilter == category, onClick = { categoryFilter = category }, label = {
                         Text(when (category) { MoveCategory.HAU -> s.haue; MoveCategory.HUT -> s.huten; MoveCategory.STICH -> s.stiche; null -> if (s === StringsDe) "Alle" else "All" })
@@ -143,14 +152,15 @@ fun MoveAudioListScreen(
                 }
             }
             Button(onClick = { showAddMoveDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(s.addMove) }
-            val visible = allMoves.filter { (categoryFilter == null || it.category == categoryFilter) && it.displayName.contains(query, ignoreCase = true) }
-            if (visible.isEmpty()) Text(if (s === StringsDe) "Keine passenden Übungen." else "No matching exercises.")
-            visible.forEach { move ->
+            }
+            }
+            if (visible.isEmpty()) item { Text(if (s === StringsDe) "Keine passenden Übungen." else "No matching exercises.") }
+            items(visible, key = { it.id }) { move ->
                 val overrideUri = moveOverrides[move.id]
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = CardDefaults.shape,
-                    color = HaulaufCard
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -159,7 +169,7 @@ fun MoveAudioListScreen(
                         Text(
                             text = move.displayName,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = when {
@@ -167,13 +177,13 @@ fun MoveAudioListScreen(
                                 else -> s.defaultAudioEnabled
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (!move.description.isNullOrBlank()) {
                             Text(
                                 text = "${s.descriptionLabel}: ${move.description}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2
                             )
                         }
@@ -195,7 +205,7 @@ fun MoveAudioListScreen(
                                 Icon(
                                     imageVector = Icons.Filled.PlayArrow,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
@@ -211,7 +221,7 @@ fun MoveAudioListScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            item { Spacer(Modifier.height(8.dp)) }
         }
     }
 
@@ -228,16 +238,16 @@ fun MoveAudioListScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = HaulaufGoldLight,
-                            unfocusedBorderColor = HaulaufTextSecondary,
-                            cursorColor = HaulaufGoldLight,
-                            focusedLabelColor = HaulaufGoldLight,
-                            unfocusedLabelColor = HaulaufTextSecondary
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    WrappingControls {
                         CategoryButton(
                             label = s.hau,
                             selected = newMoveCategory == MoveCategory.HAU,
@@ -273,7 +283,7 @@ fun MoveAudioListScreen(
                     },
                     enabled = newMoveName.isNotBlank()
                 ) {
-                    Text(s.addMove, color = HaulaufGoldLight)
+                    Text(s.addMove, color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -294,7 +304,7 @@ private fun CategoryButton(
     OutlinedButton(
         onClick = onClick,
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (selected) HaulaufGoldLight else HaulaufTextSecondary
+            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
         Text(label, fontSize = 12.sp)

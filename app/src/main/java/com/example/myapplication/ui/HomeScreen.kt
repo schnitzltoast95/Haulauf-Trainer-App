@@ -1,5 +1,6 @@
 package com.example.myapplication.ui
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
@@ -61,7 +62,7 @@ fun HomeScreen(
             Icon(
                 imageVector = Icons.Filled.Settings,
                 contentDescription = s.settings,
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -101,7 +102,7 @@ fun HomeScreen(
             Text(
                 text = s.historicalSubtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = HaulaufTextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -112,19 +113,18 @@ private fun LibraryButtonsRow(
     onOpenPresets: () -> Unit,
     onOpenMoveDetails: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val buttonWidth = if (maxWidth < 340.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) maxWidth else (maxWidth - 12.dp) / 2
+        WrappingControls {
         OutlinedButton(
             onClick = onOpenPresets,
             modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
+                .width(buttonWidth)
+                .heightIn(min = 56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.White,
-                containerColor = HaulaufCard
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             border = null
         ) {
@@ -132,7 +132,7 @@ private fun LibraryButtonsRow(
                 imageVector = Icons.AutoMirrored.Filled.List,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -143,12 +143,12 @@ private fun LibraryButtonsRow(
         OutlinedButton(
             onClick = onOpenMoveDetails,
             modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
+                .width(buttonWidth)
+                .heightIn(min = 56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.White,
-                containerColor = HaulaufCard
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             border = null
         ) {
@@ -156,7 +156,7 @@ private fun LibraryButtonsRow(
                 imageVector = Icons.Filled.Edit,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -165,17 +165,19 @@ private fun LibraryButtonsRow(
             )
         }
     }
+    }
 }
 
 @Composable
 private fun LogoSection() {
+    val logoStroke = MaterialTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
             .size(80.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                    colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
                 )
             ),
         contentAlignment = Alignment.Center
@@ -186,13 +188,13 @@ private fun LogoSection() {
             val centerY = size.height / 2
             val halfLen = size.minDimension / 3
             drawLine(
-                color = Color.White,
+                color = logoStroke,
                 start = Offset(centerX - halfLen, centerY + halfLen),
                 end = Offset(centerX + halfLen, centerY - halfLen),
                 strokeWidth = strokeWidth
             )
             drawLine(
-                color = Color.White,
+                color = logoStroke,
                 start = Offset(centerX - halfLen, centerY - halfLen),
                 end = Offset(centerX + halfLen, centerY + halfLen),
                 strokeWidth = strokeWidth
@@ -206,12 +208,12 @@ private fun LogoSection() {
             fontWeight = FontWeight.Bold,
             fontSize = 28.sp
         ),
-        color = Color.White
+        color = MaterialTheme.colorScheme.onSurface
     )
     Text(
         text = LocalStrings.current.trainer,
         style = MaterialTheme.typography.titleMedium,
-        color = HaulaufGoldLight
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -224,7 +226,7 @@ private fun QuickstartButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),
+            .heightIn(min = 64.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent
@@ -240,7 +242,7 @@ private fun QuickstartButton(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                        colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
                     ),
                     RoundedCornerShape(16.dp)
                 ),
@@ -280,43 +282,36 @@ private fun CurrentSessionCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = HaulaufCard,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         onClick = onClick
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            WrappingControls {
                 Text(
                     text = LocalStrings.current.currentSession,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = HaulaufTextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "~$durationStr",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = HaulaufTextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
+            WrappingControls {
                 SessionStat(value = preset.rounds.toString(), label = LocalStrings.current.rounds)
                 SessionStat(value = preset.unitsPerRound.toString(), label = LocalStrings.current.callsRound)
                 SessionStat(value = preset.selectedMoveIds.size.toString(), label = LocalStrings.current.moves)
             }
-            Text((if (LocalStrings.current === StringsDe) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s", style = MaterialTheme.typography.bodyMedium, color = HaulaufTextSecondary)
+            Text((if (LocalStrings.current === StringsDe) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (selectedMoveNames.isEmpty()) Text(if (LocalStrings.current === StringsDe) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
             if (selectedMoveNames.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "${LocalStrings.current.moves}: ${selectedMoveNames.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -331,12 +326,12 @@ private fun SessionStat(value: String, label: String) {
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold
             ),
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = HaulaufTextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -347,11 +342,11 @@ private fun ConfigureTrainingButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .heightIn(min = 56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = Color.White,
-            containerColor = HaulaufCard
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         border = null
     ) {
@@ -359,7 +354,7 @@ private fun ConfigureTrainingButton(onClick: () -> Unit) {
             imageVector = Icons.Filled.Settings,
             contentDescription = null,
             modifier = Modifier.size(22.dp),
-            tint = Color.White
+            tint = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(

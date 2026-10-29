@@ -1,37 +1,52 @@
 # Gemeinsamer Teststand vom 29.10.2026
 
-Dieser Stand enthält sämtliche Änderungen an Startseite, Trainingskonfiguration,
-Trainingsbedienung, Trainingsbibliothek, Übungsbibliothek und Übungseditor sowie
-gemeinsamen Audiopegeln. Die 19 historischen Standardübungen bleiben enthalten.
+Dieser Stand enthält die bisherigen Verbesserungen aller App-Bereiche und die
+sechs Nachbesserungen aus dem Impeccable-Audit. Alle 19 historischen
+Standardübungen bleiben enthalten.
 
 ## Geprüftes Artefakt
 
-- Datei: `Haulauf-Gesamtstand-2026-10-29.apk`
+- Datei: `Haulauf-Gesamtstand-2026-10-29.apk` im übergeordneten `outputs`-Ordner.
 - Vollständiger Debug-Testbuild, kein signierter Produktionsrelease.
 - App: **Haulauf Ablauf-Test**, Paket `com.example.myapplication.flowreview`.
 - Version: `1.0`, VersionCode `1`.
-- SHA-256: `703BD4A9C75DD71D9D1857816F03162DB11B6ECBCBC96BC411B52714C40F0DF3`.
-- Gerät: A001, Android 16, 1080 × 2392; Schriftfaktor 1.0.
-- Basis: GitHub-main `dd5e23b`; geprüfter Quellstand ist der Commit mit diesem Bericht.
+- SHA-256: `245FC752A104556308F6DB7859AEB016D5FBE75F43B704C0F26A8C5222352B0C`.
+- Gerät: A001, Android 16, 1080 × 2392.
+- Basis: GitHub-main `dec2e57`; Quellstand: Commit mit diesem Bericht.
 
 ## Ergebnisse
 
-- Gesamter Build erfolgreich, App und Instrumentierungs-APK aus demselben Build.
-- **2 Unit-Tests bestanden**, keine Fehler oder übersprungenen Tests.
-- **13 Android-Gerätetests bestanden**, komplette Instrumentierungssuite, 58,428 Sekunden.
+- Gemeinsamer App-/Instrumentierungsbuild erfolgreich.
+- **2 Unit-Tests bestanden**.
+- **23 Android-Gerätetests bestanden**, vollständige Suite, 78,053 Sekunden.
+- Anschließend ausschließlich die Home-Kennzahlen für große Schrift angepasst;
+  **2 gezielte Nachtests bestanden**, 15,205 Sekunden: Home bei Schriftfaktor 2.0
+  und kompletter Vorlagenablauf über die normale Startseite.
+- Erneuter Build, Unit-Tests und Lint nach dieser letzten Anpassung erfolgreich.
 - Android Lint: **0 Fehler, 0 Warnungen, 0 Hinweise**.
-- `git diff --check`: ohne Befund.
 
-Die Gerätetests umfassen historische Bilder und Quellen für alle Standardübungen,
-Trainingsvorlagen mit Bearbeiten/Kopie/Umbenennen, Abbruch und Fehlerwiederholung,
-Übungserstellung, gemeinsame Entwurfs-Speicherung, Löschfolgen, große
-Pause-/Fortsetzen-Bedienung, fehlerhafte Medienimporte mit anschließendem gültigem
-Bildimport sowie das Beenden des Vordergrunddienstes nach Trainingsabschluss.
-Speicher-/Löschfehler und Dateiauswahl-Ergebnisse werden gezielt im Test simuliert.
+Die Suite prüft historische Quellen/Bilder, Vorlagen mit Bearbeiten/Kopie/
+Umbenennen, Übungserstellung, Entwurfsspeicherung und Fehlerwiederholung,
+Löschfolgen, Medienimport, große Trainingsaktionen und Dienstende.
+Neun zusätzliche Audit-Tests prüfen verzögerte Speicher-Callbacks, Abbruch,
+Audiofehler und -freigabe, die 300-Einträge-Bibliothek, beschriftete Controls und
+schmale/große Layouts. Die Audio-Lifecycle-Prüfung läuft stumm; sie bestätigt
+technische Wiedergabe und Freigabe, nicht die Hörbarkeit während Musik.
 
-Vorangegangene Prüfungen desselben funktionalen Stands decken zusätzlich den
-Übungseditor bei Schriftfaktor 2.0 ab (vier UI- und zwei Speichertests bestanden,
-Fehleranzeigen visuell geprüft). Die vollständige Suite dieses Berichts lief bei 1.0.
+## Darstellungsprüfung
+
+Normale Ansicht sowie in Compose auf 280/320 dp begrenzte Inhalte mit Schriftfaktor
+2.0 und Trainingskonfiguration in einem 320 × 360-dp-Fenster wurden geprüft.
+Die Systemschrift-Einstellung wurde dafür nicht verändert. Screenshots von
+Konfiguration, Startseite, Kategorien, Steppern und Einstellungen wurden visuell
+geprüft; gefundene Wortumbrüche und gequetschte Kennzahlen wurden korrigiert.
+Der vollständige Hörtest mit TalkBack und physische Tablet-/Foldable-Tests fehlen.
+
+## Performance-Evidenz
+
+Bei 300 Übungen wurden vor der LazyColumn-Umstellung 300 Namen aufgebaut,
+danach nur 4; der letzte Eintrag bleibt erreichbar. Einzelmessung bis Idle:
+4304 ms vorher, 383 ms nachher. Keine statistische Benchmarkreihe.
 
 ## Reproduktion
 
@@ -42,21 +57,6 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w com.example.myapplication.flowreview.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Lokale Rohprotokolle und Gerätebilder liegen unter `.impeccable/review/` und werden
-nicht versioniert. APKs werden außerhalb des Quellrepositories bereitgestellt.
-Offene praktische Prüfungen sind in [NEXT_STEPS.md](NEXT_STEPS.md) dokumentiert;
-bestandene automatisierte Tests ersetzen diese Freigaben nicht.
-
-## Lint-Bereinigung und Audit
-
-Die 25 Warnungen und 9 Hinweise sind ohne Lint-Unterdr�ckungen bereinigt.
-Nicht verwendete historische Scans liegen unver�ndert unter `docs/historical-reference/`;
-die 19 verwendeten Standard�bungen sind durch die historische Testsuite abgedeckt.
-Optionale Signaldateien werden jetzt �ber explizite Resource-IDs eingebunden
-(siehe README); die bisher aktiven Systemton-Fallbacks bleiben erhalten.
-Launcher-Icons nutzen die vorhandenen Vektoren statt uneinheitlicher Rastergr��en.
-Auf Android 16 wurden normales und monochromes Icon zus�tzlich visuell gepr�ft.
-Die Legacy-Icon-Darstellung auf Android 7/8 wurde nicht auf einem solchen Ger�t gepr�ft.
-
-Das anschlie�ende Quellcode-Audit steht in [ANDROID_AUDIT.md](ANDROID_AUDIT.md):
-12/20, sechs offene Befunde au�erhalb der Lint-Bereinigung.
+Lokale Protokolle und Bilder: `.impeccable/review/audit-*` (nicht versioniert).
+[ANDROID_AUDIT.md](ANDROID_AUDIT.md) enthält die Nachprüfung;
+[NEXT_STEPS.md](NEXT_STEPS.md) die noch nötigen Praxis- und Releaseprüfungen.
