@@ -86,7 +86,9 @@ fun SettingsScreen(
     uiLanguage: String,
     onUiLanguageChange: (String) -> Unit,
     onPresetChange: (TrainingPreset) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    legacyAudio: Boolean = false,
+    onUseLegacyAudio: () -> Unit = {}
 ) {
     val s = LocalStrings.current
     val context = LocalContext.current
@@ -142,6 +144,14 @@ fun SettingsScreen(
                 color = HaulaufTextSecondary
             )
 
+            Text(if (legacyAudio) {
+                if (german) "Bisherige Lautstärken bleiben je Training erhalten. Eine Änderung hier setzt gemeinsame Pegel für alle Trainings." else "Existing per-training levels are preserved. Changing a slider sets shared levels for all trainings."
+            } else {
+                if (german) "Diese Lautstärken gelten für alle Trainings." else "These levels apply to all trainings."
+            }, style = MaterialTheme.typography.bodySmall)
+            if (!legacyAudio) TextButton(onClick = onUseLegacyAudio) {
+                Text(if (german) "Gespeicherte Trainingspegel verwenden" else "Use saved training levels")
+            }
             // Call volume
             SettingsAudioCard(
                 icon = Icons.Filled.Settings,
@@ -158,8 +168,7 @@ fun SettingsScreen(
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
                 onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
-                enabled = preset.endBeepEnabled,
-                onToggleEnabled = { onPresetChange(preset.copy(endBeepEnabled = it)) }
+                enabled = true
             )
 
             // Metronome global audio only (per-training behavior is configured in Advanced settings)

@@ -10,7 +10,7 @@ data class HistoricalTextSource(
     val bsbPage: Int,
     val wikPage: Int,
     val passage: String,
-) {
+) : java.io.Serializable {
     fun originalUrl(): String = meyerScanUrl(bsbPage)
     fun transcriptionUrl(): String =
         "https://wiktenauer.com/wiki/Page:Gr%C3%BCndtliche_Beschreibung_der_Kunst_des_Fechtens_(Joachim_Me%C3%BFer)_1570.pdf/$wikPage"
@@ -27,7 +27,7 @@ data class Move(
     val historicalTextSources: List<HistoricalTextSource> = emptyList(),
     val historicalNote: String? = null,
     val historicalContextOnly: Boolean = false,
-)
+) : java.io.Serializable
 
 private fun meyerScanUrl(page: Int): String =
     "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00024580_${page.toString().padStart(5, '0')}/full/full/0/default.jpg"

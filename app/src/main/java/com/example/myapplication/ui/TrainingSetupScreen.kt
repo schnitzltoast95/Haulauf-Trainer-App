@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -94,12 +96,17 @@ fun TrainingSetupScreen(
     onPresetChange: (TrainingPreset) -> Unit,
     onStart: () -> Unit,
     onSavePreset: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    savedName: String? = null,
+    onSaveCopy: ((String) -> Unit)? = null
 ) {
     val s = LocalStrings.current
     var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
-    var presetName by remember { mutableStateOf("") }
+    var presetName by remember { mutableStateOf(savedName.orEmpty()) }
+    var saveCopy by remember { mutableStateOf(false) }
+    var showPriorities by remember { mutableStateOf(false) }
+    val de = s === StringsDe
     var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
     var rounds by remember(preset.rounds) { mutableStateOf(preset.rounds) }
     var unitsPerRound by remember(preset.unitsPerRound) { mutableStateOf(preset.unitsPerRound) }
@@ -115,6 +122,7 @@ fun TrainingSetupScreen(
         )
     }
     var showAdvanced by remember { mutableStateOf(false) }
+    var showSelection by remember { mutableStateOf(false) }
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
     var metronomeBeats by remember(preset.metronomeBeatIntervalMs) {
@@ -173,7 +181,12 @@ fun TrainingSetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(s.configureTrainingTitle) },
+                title = { Text(savedName ?: s.configureTrainingTitle, maxLines = 1) },
+                actions = {
+                    if (savedName != null) TextButton(onClick = { saveCopy = true; presetName = "$savedName (${if (de) "Kopie" else "copy"})"; showSavePresetDialog = true }) {
+                        Text(if (de) "Kopie" else "Copy")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
@@ -196,9 +209,10 @@ fun TrainingSetupScreen(
                 ) {
                     Button(
                         onClick = onStart,
+                        enabled = selectedValidIds.isNotEmpty(),
                         modifier = Modifier
                             .weight(1f)
-                            .height(56.dp),
+                            .heightIn(min = 56.dp),
                         shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
@@ -209,38 +223,42 @@ fun TrainingSetupScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp)
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
                                     ),
                                     shape = MaterialTheme.shapes.large
-                                ),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = s.startTraining,
+                                text = if (savedName != null) { if (de) "Nur diesmal starten" else "Start this time" } else s.startTraining,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
-                                color = Color.White
+                                color = Color.Black,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
 
                     OutlinedButton(
-                        onClick = { showSavePresetDialog = true },
+                        onClick = { saveCopy = false; showSavePresetDialog = true },
                         modifier = Modifier
                             .weight(1f)
-                            .height(56.dp),
+                            .heightIn(min = 56.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Color.White
                         )
                     ) {
                         Text(
-                            text = s.savePreset,
-                            style = MaterialTheme.typography.titleMedium
+                            text = if (savedName != null) s.save else s.savePreset,
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -255,52 +273,288 @@ fun TrainingSetupScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Estimated duration card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                color = HaulaufGoldDark.copy(alpha = 0.25f),
-                tonalElevation = 0.dp
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = (if (de) "Dauer ca. " else "About ") + "${durationMinutes}m ${durationSeconds}s",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = HaulaufGoldLight
+                )
+                Text(
+                    text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds) +
+                        (if (de) " · Start in ${initialCountdownSec}s" else " · Starts in ${initialCountdownSec}s"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HaulaufTextSecondary
+                )
+            }
+            OutlinedButton(
+                onClick = { showSelection = !showSelection },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(MaterialTheme.shapes.small)
-                                    .background(HaulaufGoldLight.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "⏱",
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Spacer(Modifier.size(8.dp))
+                Text(
+                    text = if (showSelection) {
+                        if (de) "Auswahl schließen (${selectedValidIds.size})" else "Close selection (${selectedValidIds.size})"
+                    } else {
+                        if (de) "Übungen auswählen (${selectedValidIds.size})" else "Choose exercises (${selectedValidIds.size})"
+                    },
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (selectedValidIds.isEmpty()) Text(
+                if (de) "Wähle mindestens eine Übung zum Starten." else "Select at least one exercise to start.",
+                color = MaterialTheme.colorScheme.error
+            ) else if (!showSelection) Text(
+                text = allMoves.filter { it.id in selectedValidIds }.joinToString(", ") { it.displayName },
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = HaulaufTextSecondary
+            )
+            if (showSelection) {
+                // Select moves
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CardDefaults.shape,
+                    color = HaulaufCard
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        // Filter moves based on selected tab
+                        val movesByCategory = allMoves.groupBy { it.category }
+                        val hauMoves = movesByCategory[MoveCategory.HAU] ?: emptyList()
+                        val hutMoves = movesByCategory[MoveCategory.HUT] ?: emptyList()
+                        val stichMoves = movesByCategory[MoveCategory.STICH] ?: emptyList()
+                        val movesToShow = when (selectedCategoryTab) {
+                            1 -> hauMoves
+                            2 -> hutMoves
+                            3 -> stichMoves
+                            else -> allMoves
+                        }
+                        val visibleMoveIds = movesToShow.map { it.id }.toSet()
+                        val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedValidIds }
+                        val selectedHauCount = hauMoves.count { it.id in selectedValidIds }
+                        val selectedHutCount = hutMoves.count { it.id in selectedValidIds }
+                        val selectedStichCount = stichMoves.count { it.id in selectedValidIds }
+                        val totalAllCount = allMoves.size
+                        val totalHauCount = hauMoves.size
+                        val totalHutCount = hutMoves.size
+                        val totalStichCount = stichMoves.size
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = s.estimatedDuration,
+                                text = s.selectMoves,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White
                             )
+                            TextButton(
+                                onClick = {
+                                    if (allVisibleSelected) {
+                                        selectedIds = selectedValidIds - visibleMoveIds
+                                        movePriorities = movePriorities - visibleMoveIds
+                                    } else {
+                                        val missingIds = visibleMoveIds - selectedValidIds
+                                        selectedIds = selectedValidIds + visibleMoveIds
+                                        movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
+                                    }
+                                },
+                                enabled = movesToShow.isNotEmpty(),
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = if (allVisibleSelected) s.selectNone else s.selectAll,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = HaulaufGoldLight
+                                )
+                            }
                         }
+                        Spacer(Modifier.height(12.dp))
+
+                        TextButton(onClick = { showPriorities = !showPriorities }) {
+                            Text(if (showPriorities) { if (de) "Gewichtung schließen" else "Hide weighting" } else { if (de) "Gewichtung anpassen" else "Adjust weighting" })
+                        }
+                        // Tabs for categories
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = Color.White.copy(alpha = 0.03f),
+                            border = BorderStroke(1.dp, HaulaufCardBorder)
+                        ) {
+                            TabRow(
+                                selectedTabIndex = selectedCategoryTab,
+                                containerColor = Color.Transparent,
+                                contentColor = HaulaufGoldLight,
+                                divider = {},
+                                indicator = { tabPositions ->
+                                    TabRowDefaults.SecondaryIndicator(
+                                        modifier = Modifier
+                                            .tabIndicatorOffset(tabPositions[selectedCategoryTab])
+                                            .padding(horizontal = 14.dp),
+                                        height = 2.dp,
+                                        color = HaulaufGoldLight
+                                    )
+                                }
+                            ) {
+                                Tab(
+                                    selected = selectedCategoryTab == 0,
+                                    onClick = { selectedCategoryTab = 0 },
+                                    selectedContentColor = HaulaufGoldLight,
+                                    unselectedContentColor = HaulaufTextSecondary,
+                                    text = {
+                                        Text(
+                                            "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
+                                            fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 1,
+                                    onClick = { selectedCategoryTab = 1 },
+                                    selectedContentColor = HaulaufGoldLight,
+                                    unselectedContentColor = HaulaufTextSecondary,
+                                    text = {
+                                        Text(
+                                            "${s.haue}\n($selectedHauCount/$totalHauCount)",
+                                            fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 2,
+                                    onClick = { selectedCategoryTab = 2 },
+                                    selectedContentColor = HaulaufGoldLight,
+                                    unselectedContentColor = HaulaufTextSecondary,
+                                    text = {
+                                        Text(
+                                            "${s.huten}\n($selectedHutCount/$totalHutCount)",
+                                            fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 3,
+                                    onClick = { selectedCategoryTab = 3 },
+                                    selectedContentColor = HaulaufGoldLight,
+                                    unselectedContentColor = HaulaufTextSecondary,
+                                    text = {
+                                        Text(
+                                            "${s.stiche}\n($selectedStichCount/$totalStichCount)",
+                                            fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+
+                        movesToShow.forEach { move ->
+                                    val selected = move.id in selectedValidIds
+                                    val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
+                                    val increasePriority: () -> Unit = {
+                                        if (!selected) {
+                                            selectedIds = selectedValidIds + move.id
+                                            movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
+                                        } else {
+                                            val newPriority = nextMovePriority(priority)
+                                            movePriorities = movePriorities + (move.id to newPriority)
+                                        }
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                            .combinedClickable(
+                                                onClick = {
+                                                if (selected) {
+                                                    selectedIds = selectedValidIds - move.id
+                                                    movePriorities = movePriorities - move.id
+                                                } else {
+                                                    selectedIds = selectedValidIds + move.id
+                                                    movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
+                                                }
+                                            },
+                                                onDoubleClick = if (showPriorities) increasePriority else null,
+                                                onLongClick = if (showPriorities) increasePriority else null
+                                            ),
+                                        color = Color.White.copy(alpha = 0.02f)
+                                    ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = move.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White.copy(alpha = 0.95f),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (selected) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (showPriorities) TextButton(onClick = increasePriority) {
+                                                    Text("${priority}×")
+                                                }
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = { showMoveInfoDialog = move },
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Info,
+                                                contentDescription = s.moveInfo,
+                                                tint = HaulaufTextSecondary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .border(
+                                                    width = 1.dp,
+                                                    color = if (selected) HaulaufGoldLight else HaulaufTextSecondary.copy(alpha = 0.5f),
+                                                    shape = RectangleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (selected) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    tint = HaulaufGoldLight,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "${durationMinutes}m ${durationSeconds}s",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = HaulaufGoldLight,
-                            fontWeight = FontWeight.Bold
+                            text = s.selectionSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White
                         )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HaulaufTextSecondary
+                        )
+
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
-                    )
                 }
             }
 
@@ -439,268 +693,14 @@ fun TrainingSetupScreen(
             }
 
             // Pause between rounds
-            StepperCard(
+            if (rounds > 1) StepperCard(
                 title = s.pauseBetweenRounds,
                 value = pauseSec.toInt(),
                 onChange = { v -> pauseSec = v.coerceAtLeast(0).toFloat() }
             )
 
-            // Select moves
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                color = HaulaufCard
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    // Filter moves based on selected tab
-                    val movesByCategory = allMoves.groupBy { it.category }
-                    val hauMoves = movesByCategory[MoveCategory.HAU] ?: emptyList()
-                    val hutMoves = movesByCategory[MoveCategory.HUT] ?: emptyList()
-                    val stichMoves = movesByCategory[MoveCategory.STICH] ?: emptyList()
-                    val movesToShow = when (selectedCategoryTab) {
-                        1 -> hauMoves
-                        2 -> hutMoves
-                        3 -> stichMoves
-                        else -> allMoves
-                    }
-                    val visibleMoveIds = movesToShow.map { it.id }.toSet()
-                    val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedValidIds }
-                    val selectedHauCount = hauMoves.count { it.id in selectedValidIds }
-                    val selectedHutCount = hutMoves.count { it.id in selectedValidIds }
-                    val selectedStichCount = stichMoves.count { it.id in selectedValidIds }
-                    val totalAllCount = allMoves.size
-                    val totalHauCount = hauMoves.size
-                    val totalHutCount = hutMoves.size
-                    val totalStichCount = stichMoves.size
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = s.selectMoves,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        TextButton(
-                            onClick = {
-                                if (allVisibleSelected) {
-                                    selectedIds = selectedValidIds - visibleMoveIds
-                                    movePriorities = movePriorities - visibleMoveIds
-                                } else {
-                                    val missingIds = visibleMoveIds - selectedValidIds
-                                    selectedIds = selectedValidIds + visibleMoveIds
-                                    movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
-                                }
-                            },
-                            enabled = movesToShow.isNotEmpty(),
-                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = if (allVisibleSelected) s.selectNone else s.selectAll,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = HaulaufGoldLight
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    
-                    // Tabs for categories
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = Color.White.copy(alpha = 0.03f),
-                        border = BorderStroke(1.dp, HaulaufCardBorder)
-                    ) {
-                        TabRow(
-                            selectedTabIndex = selectedCategoryTab,
-                            containerColor = Color.Transparent,
-                            contentColor = HaulaufGoldLight,
-                            divider = {},
-                            indicator = { tabPositions ->
-                                TabRowDefaults.SecondaryIndicator(
-                                    modifier = Modifier
-                                        .tabIndicatorOffset(tabPositions[selectedCategoryTab])
-                                        .padding(horizontal = 14.dp),
-                                    height = 2.dp,
-                                    color = HaulaufGoldLight
-                                )
-                            }
-                        ) {
-                            Tab(
-                                selected = selectedCategoryTab == 0,
-                                onClick = { selectedCategoryTab = 0 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
-                                        fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 1,
-                                onClick = { selectedCategoryTab = 1 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.haue}\n($selectedHauCount/$totalHauCount)",
-                                        fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 2,
-                                onClick = { selectedCategoryTab = 2 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.huten}\n($selectedHutCount/$totalHutCount)",
-                                        fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 3,
-                                onClick = { selectedCategoryTab = 3 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.stiche}\n($selectedStichCount/$totalStichCount)",
-                                        fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    
-                    movesToShow.forEach { move ->
-                                val selected = move.id in selectedValidIds
-                                val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
-                                val increasePriority: () -> Unit = {
-                                    if (!selected) {
-                                        selectedIds = selectedValidIds + move.id
-                                        movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
-                                    } else {
-                                        val newPriority = nextMovePriority(priority)
-                                        movePriorities = movePriorities + (move.id to newPriority)
-                                    }
-                                }
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .combinedClickable(
-                                            onClick = {
-                                            if (selected) {
-                                                selectedIds = selectedValidIds - move.id
-                                                movePriorities = movePriorities - move.id
-                                            } else {
-                                                selectedIds = selectedValidIds + move.id
-                                                movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
-                                            }
-                                        },
-                                            onDoubleClick = increasePriority,
-                                            onLongClick = increasePriority
-                                        ),
-                                    color = Color.White.copy(alpha = 0.02f)
-                                ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = move.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.95f),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (selected) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            if (priority > MIN_MOVE_PRIORITY) {
-                                                Text(
-                                                    text = if (priority == 2) s.priorityHigh else s.priorityHighest,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = HaulaufTextSecondary
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = increasePriority,
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                PriorityHeartIcon(
-                                                    priority = priority,
-                                                    contentDescription = s.priority,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = { showMoveInfoDialog = move },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Info,
-                                            contentDescription = s.moveInfo,
-                                            tint = HaulaufTextSecondary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (selected) HaulaufGoldLight else HaulaufTextSecondary.copy(alpha = 0.5f),
-                                                shape = RectangleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (selected) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Check,
-                                                contentDescription = null,
-                                                tint = HaulaufGoldLight,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = s.selectionSummary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
-                    )
-                    
-                }
+            OutlinedButton(onClick = { showAdvanced = !showAdvanced }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (showAdvanced) { if (de) "Erweitert schließen" else "Hide advanced" } else s.advancedSettings)
             }
 
             // Advanced settings kept minimal / collapsed toggle (optional)
@@ -799,17 +799,11 @@ fun TrainingSetupScreen(
                         )
                     }
                 }
-            } else {
-                Text(
-                    text = s.advancedSettings,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .clickable { showAdvanced = true }
-                        .padding(top = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
-                )
             }
+
+
+
+
 
         }
     }
@@ -836,7 +830,7 @@ fun TrainingSetupScreen(
                 TextButton(
                     onClick = {
                         if (presetName.isNotBlank()) {
-                            onSavePreset(presetName.trim())
+                            if (saveCopy && onSaveCopy != null) onSaveCopy(presetName.trim()) else onSavePreset(presetName.trim())
                             presetName = ""
                             showSavePresetDialog = false
                         }
@@ -863,54 +857,6 @@ fun TrainingSetupScreen(
             move = move,
             onDismiss = { showMoveInfoDialog = null }
         )
-    }
-}
-
-@Composable
-private fun PriorityHeartIcon(
-    priority: Int,
-    contentDescription: String,
-    modifier: Modifier = Modifier
-) {
-    when (priority) {
-        1 -> {
-            Icon(
-                imageVector = Icons.Filled.FavoriteBorder,
-                contentDescription = contentDescription,
-                tint = HaulaufTextSecondary,
-                modifier = modifier
-            )
-        }
-        2 -> {
-            Box(modifier = modifier) {
-                Icon(
-                    imageVector = Icons.Filled.FavoriteBorder,
-                    contentDescription = contentDescription,
-                    tint = HaulaufGold,
-                    modifier = Modifier.matchParentSize()
-                )
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = null,
-                    tint = HaulaufGold,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .drawWithContent {
-                            clipRect(right = size.width / 2f) {
-                                this@drawWithContent.drawContent()
-                            }
-                        }
-                )
-            }
-        }
-        else -> {
-            Icon(
-                imageVector = Icons.Filled.Favorite,
-                contentDescription = contentDescription,
-                tint = HaulaufGold,
-                modifier = modifier
-            )
-        }
     }
 }
 

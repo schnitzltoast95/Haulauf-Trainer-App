@@ -6,4 +6,4 @@ data class SavedPreset(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val preset: TrainingPreset
-)
+) : java.io.Serializable

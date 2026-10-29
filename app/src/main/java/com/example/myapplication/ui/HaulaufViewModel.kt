@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.AudioLevels
 import com.example.myapplication.data.DEFAULT_MOVES
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.data.PreferencesRepository
@@ -58,14 +59,14 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             val info = infoMap[move.id]
             move.copy(
                 description = info?.first ?: move.description,
-                imagePath = info?.second ?: move.imagePath
+                imagePath = if (info != null) info.second else move.imagePath
             )
         }
         val customWithInfo = custom.map { move ->
             val info = infoMap[move.id]
             move.copy(
                 description = info?.first ?: move.description,
-                imagePath = info?.second ?: move.imagePath
+                imagePath = if (info != null) info.second else move.imagePath
             )
         }
         defaultWithInfo + customWithInfo
@@ -130,6 +131,9 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    val globalAudio = prefs.globalAudio.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    fun saveGlobalAudio(levels: AudioLevels?) { viewModelScope.launch { prefs.saveGlobalAudio(levels) } }
+
     fun updatePreset(newPreset: TrainingPreset) {
         userEditedPreset = true
         preset.value = newPreset
@@ -165,7 +169,8 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         engine?.stop()
         engineStateJob?.cancel()
         ContextCompat.startForegroundService(app, Intent(app, TrainingForegroundService::class.java))
-        audioManager.setVolumes(p.volumeCall, p.volumeBeep, p.volumeTick)
+        val levels = globalAudio.value ?: AudioLevels.from(p)
+        audioManager.setVolumes(levels.call, levels.beep, levels.tick)
         val overridesSnapshot = moveOverrides.value
         val trainingEngine = TrainingEngine(
             scope = viewModelScope,
@@ -219,21 +224,25 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     fun getMoveOverride(moveId: String): String? = moveOverrides.value[moveId]
 
-    fun addCustomMove(displayName: String, category: MoveCategory) {
+    fun addCustomMove(displayName: String, category: MoveCategory, onAdded: (String) -> Unit = {}) {
         viewModelScope.launch {
-            prefs.addCustomMove(displayName, category)
+            val move = prefs.addCustomMove(displayName, category)
+            onAdded(move.id)
         }
     }
 
-    fun removeCustomMove(moveId: String) {
+    fun removeCustomMove(moveId: String, onDeleted: () -> Unit, onError: () -> Unit) {
         viewModelScope.launch {
-            prefs.removeCustomMove(moveId)
-            prefs.saveMoveAudioOverride(moveId, null)
-            preset.value = preset.value.copy(
-                selectedMoveIds = preset.value.selectedMoveIds - moveId,
-                movePriorities = preset.value.movePriorities - moveId
-            )
-            prefs.saveLastUsedPreset(preset.value)
+            try {
+                prefs.removeCustomMove(moveId)
+                preset.value = preset.value.copy(
+                    selectedMoveIds = preset.value.selectedMoveIds - moveId,
+                    movePriorities = preset.value.movePriorities - moveId
+                )
+                onDeleted()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) { onError() }
         }
     }
 
@@ -253,18 +262,28 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val move = allMoves.value.find { it.id == moveId } ?: return@launch
             val override = moveOverrides.value[moveId]
+            val levels = globalAudio.value ?: AudioLevels.from(preset.value)
+            audioManager.setVolumes(levels.call, levels.beep, levels.tick)
             audioManager.playMoveAudio(move, override)
         }
     }
 
-    fun savePreset(name: String, presetId: String? = null) {
+    fun savePreset(name: String, presetId: String? = null, value: TrainingPreset = preset.value, onSaved: () -> Unit = {}, onError: () -> Unit = {}) {
         viewModelScope.launch {
             val savedPreset = SavedPreset(
                 id = presetId ?: java.util.UUID.randomUUID().toString(),
                 name = name,
-                preset = preset.value
+                preset = value
             )
-            prefs.savePreset(savedPreset)
+            try { prefs.savePreset(savedPreset); onSaved() }
+            catch (_: Exception) { onError() }
+        }
+    }
+
+    fun renamePreset(presetId: String, name: String, onSaved: () -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            try { prefs.renamePreset(presetId, name); onSaved() }
+            catch (_: Exception) { onError() }
         }
     }
 
@@ -276,6 +295,21 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
 
     fun loadPreset(savedPreset: SavedPreset) {
         preset.value = savedPreset.preset
+    }
+
+    fun saveExercise(move: Move, audioUri: String?, onSaved: () -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            try { prefs.saveExercise(move, audioUri); onSaved() }
+            catch (_: Exception) { onError() }
+        }
+    }
+
+    fun previewExercise(move: Move, audioUri: String?) {
+        viewModelScope.launch {
+            val levels = globalAudio.value ?: AudioLevels.from(preset.value)
+            audioManager.setVolumes(levels.call, levels.beep, levels.tick)
+            audioManager.playMoveAudio(move, audioUri)
+        }
     }
 
     fun saveMoveInfo(moveId: String, description: String?, imagePath: String?) {

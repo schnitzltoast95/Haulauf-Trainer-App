@@ -45,14 +45,9 @@ fun StepperCard(
         shape = CardDefaults.shape,
         color = HaulaufCard
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
-            )
-            Spacer(Modifier.height(8.dp))
-            StepperInline(value = value, onChange = onChange)
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = Color.White, modifier = Modifier.weight(1f))
+            StepperInline(value = value, onChange = onChange, modifier = Modifier.width(192.dp))
         }
     }
 }
@@ -110,7 +105,7 @@ fun SmallRoundButton(
 ) {
     Surface(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
         color = Color(0xFF2A2A2A)
