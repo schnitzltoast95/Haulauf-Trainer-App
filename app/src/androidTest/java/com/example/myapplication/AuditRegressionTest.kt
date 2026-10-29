@@ -301,7 +301,7 @@ class AuditRegressionTest {
             }
         } }
         compose.onNodeWithText("Training starten").assertHeightIsAtLeast(88.dp)
-        compose.onNodeWithText("Start in 5s", substring = true).assertExists()
+        compose.onNodeWithText("Start in 5s", substring = true).assertDoesNotExist()
         capture("home-start-height")
     }
 

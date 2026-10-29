@@ -75,11 +75,7 @@ fun HomeScreen(
                 Text(s.appName, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text(s.trainer, style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary)
-                Text(s.historicalSubtitle,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 32.dp),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(32.dp))
                 CurrentSessionCard(
                     preset = preset,
                     selectedMoveNames = selectedMoveNames,
@@ -91,6 +87,12 @@ fun HomeScreen(
                     onOpenPresets = onOpenPresets,
                     onOpenMoveDetails = onOpenMoveDetails
                 )
+                Text(s.historicalSubtitle,
+                    modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+
             }
         }
         IconButton(
@@ -267,57 +269,69 @@ private fun CurrentSessionCard(
     val seconds = preset.estimatedDurationSeconds()
     val duration = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(if (de) "Schnellstart" else "Quick start",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = onClick, shape = MaterialTheme.shapes.medium) {
-                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (de) "Anpassen" else "Adjust")
+        Surface(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth()) {
+                    Text(if (de) "Schnellstart" else "Quick start",
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Filled.Edit,
+                        contentDescription = if (de) "Training anpassen" else "Adjust training",
+                        modifier = Modifier.align(Alignment.CenterEnd).size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(24.dp))
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    if (maxWidth < 280.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SessionStat(preset.rounds.toString(), s.rounds)
+                            SessionStat(preset.unitsPerRound.toString(), s.callsRound)
+                            SessionStat(duration, if (de) "Dauer (ca.)" else "Duration (approx.)")
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SessionStat(preset.rounds.toString(), s.rounds, Modifier.weight(1f))
+                            SessionStat(preset.unitsPerRound.toString(), s.callsRound, Modifier.weight(1.5f))
+                            SessionStat(duration, if (de) "Dauer (ca.)" else "Duration (approx.)", Modifier.weight(1.2f))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+                Text(if (de) "Zufallsansagen aus ${selectedMoveNames.size} ausgewählten Übungen"
+                    else "Random calls from ${selectedMoveNames.size} selected exercises",
+                    textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (selectedMoveNames.isEmpty()) {
+                    Text(if (de) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
+                } else {
+                    Text(selectedMoveNames.joinToString(", "),
+                        modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
         Spacer(Modifier.height(16.dp))
-        WrappingControls {
-            SessionStat(preset.rounds.toString(), s.rounds)
-            SessionStat(preset.unitsPerRound.toString(), s.callsRound)
-            SessionStat(duration, if (de) "Dauer (ca.)" else "Duration (approx.)")
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("${selectedMoveNames.size} ${s.moves} · " +
-            (if (de) "Start in " else "Starts in ") + "${preset.initialCountdownMs / 1000}s",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (selectedMoveNames.isEmpty()) {
-            Text(if (de) "Übungen auswählen" else "Select exercises", color = MaterialTheme.colorScheme.error)
-        } else {
-            Text(selectedMoveNames.joinToString(", "),
-                modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        Spacer(Modifier.height(24.dp))
         QuickstartButton(onStart, selectedMoveNames)
     }
 }
 
 @Composable
-private fun SessionStat(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun SessionStat(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
