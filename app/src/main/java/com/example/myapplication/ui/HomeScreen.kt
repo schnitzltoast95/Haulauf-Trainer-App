@@ -6,7 +6,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -22,6 +21,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Move
@@ -47,62 +48,80 @@ fun HomeScreen(
         .filter { it.id in preset.selectedMoveIds }
         .map { it.displayName }
         .sorted()
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
+        val viewportHeight = maxHeight
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 48.dp, bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = viewportHeight)
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LogoSection()
-                Spacer(modifier = Modifier.height(32.dp))
-                QuickstartButton(
-                    onClick = onQuickstart,
-                    selectedMoveNames = selectedMoveNames
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CurrentSessionCard(
-                    preset = preset,
-                    selectedMoveNames = selectedMoveNames,
-                    onClick = onEditCurrentSession
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                ConfigureTrainingButton(onClick = onConfigureTraining)
-                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LogoSection()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = s.historicalSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = s.settings,
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    QuickstartButton(
+                        onClick = onQuickstart,
+                        selectedMoveNames = selectedMoveNames
+                    )
+                    CurrentSessionCard(
+                        preset = preset,
+                        selectedMoveNames = selectedMoveNames,
+                        onClick = onEditCurrentSession
+                    )
+                    ConfigureTrainingButton(onClick = onConfigureTraining)
+                }
+
                 LibraryButtonsRow(
                     onOpenPresets = onOpenPresets,
                     onOpenMoveDetails = onOpenMoveDetails
                 )
             }
-            Text(
-                text = s.historicalSubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        IconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 8.dp, end = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Settings,
-                contentDescription = s.settings,
-                tint = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
 }
@@ -311,7 +330,9 @@ private fun CurrentSessionCard(
                 Text(
                     text = "${LocalStrings.current.moves}: ${selectedMoveNames.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
