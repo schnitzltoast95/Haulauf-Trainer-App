@@ -31,7 +31,7 @@ fun TrainingScreen(
     val s by state.collectAsState()
     var isStopping by remember { mutableStateOf(false) }
     BackHandler {
-        if (s is TrainingState.Paused || s is TrainingState.Finished || s is TrainingState.Idle) {
+        if (s is TrainingState.StartCountdown || s is TrainingState.Paused || s is TrainingState.Finished || s is TrainingState.Idle) {
             isStopping = true
             onStop()
         } else onPause()
@@ -68,7 +68,15 @@ fun TrainingScreen(
             if (isStopping) {
                 return@Column
             }
-            if (s is TrainingState.Paused) {
+            if (s is TrainingState.StartCountdown) {
+                OutlinedButton(
+                    onClick = {
+                        isStopping = true
+                        onStop()
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp)
+                ) { Text(strings.cancel, style = MaterialTheme.typography.headlineSmall) }
+            } else if (s is TrainingState.Paused) {
                 Button(
                     onClick = onResume,
                     modifier = Modifier

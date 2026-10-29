@@ -67,6 +67,22 @@ class TrainingEngineTest {
         Unit
     }
 
+    @Test
+    fun cancellingCountdownNeverStartsCallsOrFinishSignal() = runBlocking {
+        var calls = 0
+        var finishes = 0
+        val engine = createEngine(this,
+            TrainingPreset(initialCountdownMs = 1000, selectedMoveIds = setOf("oberhau")),
+            onMove = { calls++ }, onFinish = { finishes++ })
+        engine.start()
+        withTimeout(2000) { engine.state.first { it is TrainingState.StartCountdown } }
+        engine.stop()
+        delay(1200)
+        assertEquals(TrainingState.Idle, engine.state.value)
+        assertEquals(0, calls)
+        assertEquals(0, finishes)
+    }
+
     private fun createEngine(
         scope: CoroutineScope,
         preset: TrainingPreset,
