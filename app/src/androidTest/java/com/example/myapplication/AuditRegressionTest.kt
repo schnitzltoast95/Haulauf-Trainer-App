@@ -305,4 +305,21 @@ class AuditRegressionTest {
         capture("home-start-height")
     }
 
+    @Test fun setupStartAndSaveActionsHaveMatchingHeight() {
+        compose.setContent { MyApplicationTheme(darkTheme = true) {
+            CompositionLocalProvider(LocalStrings provides StringsDe) {
+                TrainingSetupScreen(TrainingPreset(), DEFAULT_MOVES, {}, {}, {}, {})
+            }
+        } }
+        val startBounds = compose.onNodeWithText(StringsDe.startTraining)
+            .getUnclippedBoundsInRoot()
+        val saveBounds = compose.onNodeWithText(StringsDe.savePreset)
+            .getUnclippedBoundsInRoot()
+        val startHeight = startBounds.bottom - startBounds.top
+        val saveHeight = saveBounds.bottom - saveBounds.top
+        assertTrue("Start and save differ: $startHeight vs $saveHeight",
+            kotlin.math.abs((startHeight - saveHeight).value) < 1f)
+        assertTrue(startHeight >= 88.dp)
+    }
+
 }

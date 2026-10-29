@@ -256,7 +256,7 @@ fun TrainingSetupScreen(
                         onClick = { saveCopy = false; showSavePresetDialog = true },
                         modifier = Modifier
                             .width(actionWidth)
-                            .heightIn(min = 56.dp),
+                            .heightIn(min = 88.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.onSurface
