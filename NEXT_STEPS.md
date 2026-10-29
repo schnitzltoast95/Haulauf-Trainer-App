@@ -36,6 +36,7 @@ Nachweise und Grenzen: [ANDROID_AUDIT.md](ANDROID_AUDIT.md).
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) vollständig durchgehen, einschließlich
   Stimmenwahl und hörbarer Audioausgabe des tatsächlichen Release-Artefakts.
 - Versionsnummer erhöhen, Produktions-APK signieren und Installation beziehungsweise
-  Update mit vorhandenen Nutzerdaten prüfen. Die aktuelle isolierte Test-App besitzt
-  eigene Daten und ersetzt keine vorhandene Produktionsinstallation.
+  Update mit vorhandenen Nutzerdaten prüfen. Das Gesamt-APK verwendet wieder die reguläre App-Kennung und ist
+  derzeit mit dem Debug-Schlüssel signiert. Isolierte Test-APKs ausschließlich
+  für die Geräteprüfung verwenden; nicht als Gesamtversion ausliefern.
 - Erst nach diesen Prüfungen den gemeinsamen Stand als Produktionsrelease freigeben.

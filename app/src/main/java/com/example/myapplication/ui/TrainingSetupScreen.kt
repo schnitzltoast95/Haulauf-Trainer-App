@@ -219,7 +219,7 @@ fun TrainingSetupScreen(
                         enabled = selectedValidIds.isNotEmpty(),
                         modifier = Modifier
                             .width(actionWidth)
-                            .heightIn(min = 56.dp),
+                            .heightIn(min = 88.dp),
                         shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
@@ -231,7 +231,7 @@ fun TrainingSetupScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 56.dp)
+                                .heightIn(min = 88.dp)
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)

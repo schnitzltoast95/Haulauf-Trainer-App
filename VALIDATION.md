@@ -8,11 +8,11 @@ Standardübungen bleiben enthalten.
 
 - Datei: `Haulauf-Gesamtstand-2026-10-29.apk` im übergeordneten `outputs`-Ordner.
 - Vollständiger Debug-Testbuild, kein signierter Produktionsrelease.
-- App: **Haulauf Ablauf-Test**, Paket `com.example.myapplication.flowreview`.
+- App: **Haulauf Trainer**, reguläres Paket `com.example.myapplication`.
 - Version: `1.0`, VersionCode `1`.
-- SHA-256: `245FC752A104556308F6DB7859AEB016D5FBE75F43B704C0F26A8C5222352B0C`.
+- SHA-256: `BA08BE4D8E8C56881311608F061DB397B5DFE0F05219C35201946B4F46267FAB`.
 - Gerät: A001, Android 16, 1080 × 2392.
-- Basis: GitHub-main `dec2e57`; Quellstand: Commit mit diesem Bericht.
+- Basis: GitHub-main `1f1474b`; Quellstand: Commit mit diesem Bericht.
 
 ## Ergebnisse
 
@@ -60,3 +60,21 @@ adb shell am instrument -w com.example.myapplication.flowreview.test/androidx.te
 Lokale Protokolle und Bilder: `.impeccable/review/audit-*` (nicht versioniert).
 [ANDROID_AUDIT.md](ANDROID_AUDIT.md) enthält die Nachprüfung;
 [NEXT_STEPS.md](NEXT_STEPS.md) die noch nötigen Praxis- und Releaseprüfungen.
+
+## Nachkorrektur: höhere Startaktionen und reguläre App
+
+- Startaktionen auf Home und in der Konfiguration mindestens 88 dp hoch; auf Home
+  füllt auch die goldene Innenfläche diese Höhe vollständig.
+- Der Standard-Countdown bleibt 5000 ms. Der Dienst-Lifecycle-Test hatte 1000 ms
+  als letzte Einheit gespeichert; er stellt nun die vorherige Einheit wieder her.
+- Vier gezielte Gerätetests bestanden (11,522 s): Mindesthöhe/5-Sekunden-Standard,
+  Home mit großer Schrift, kleine/große Konfiguration und Dienst-Lifecycle.
+- Reguläres APK ohne `flow-review.init.gradle` gebaut, installiert und gestartet;
+  echte Startseite zeigt „Start in 5s“. Lint sauber, 2 Unit-Tests bestanden.
+- Testläufe bleiben isoliert. Das bereitgestellte Gesamt-APK verwendet wieder den
+  Namen „Haulauf Trainer“ und die ursprüngliche App-Kennung. Es ist weiterhin ein
+  Debug-Build, kein signierter Produktionsrelease. Launcher-Ordner wie „Sport“
+  werden vom Launcher verwaltet und nicht durch das APK angelegt.
+
+Reguläres APK bauen: `./gradlew :app:assembleDebug`. Der obige Testbefehl mit
+Init-Script baut ausdrücklich die separate Test-App und ist kein Auslieferungsbuild.
