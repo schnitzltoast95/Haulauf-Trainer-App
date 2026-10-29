@@ -3,6 +3,7 @@ package com.example.myapplication.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import androidx.core.net.toUri
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -203,7 +204,7 @@ fun ExerciseEditor(
         saving = true
         onSave(draft, audioUri, {
             saving = false
-            val kept = setOf(imagePath, audioUri?.let { Uri.parse(it).path })
+            val kept = setOf(imagePath, audioUri?.let { it.toUri().path })
             stagedFiles.filter { it.absolutePath !in kept }.forEach { it.delete() }
             stagedFiles.clear()
             focus.clearFocus()

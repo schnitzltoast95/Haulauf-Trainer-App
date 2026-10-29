@@ -1,6 +1,8 @@
 package com.example.myapplication.audio
 
 import android.content.Context
+import androidx.annotation.RawRes
+import androidx.core.net.toUri
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.SoundPool
@@ -8,7 +10,6 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.media.ToneGenerator
 import android.media.AudioManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import com.example.myapplication.R
@@ -21,6 +22,8 @@ class TrainingAudioManager(
     private var volumeCall: Float = 1f,
     private var volumeBeep: Float = 0.75f,
     private var volumeTick: Float = 0.25f,
+    @RawRes private val tickResource: Int = 0,
+    @RawRes private val windowEndResource: Int = 0,
 ) {
     private var tts: TextToSpeech? = null
     private var ttsSpeechRate: Float = 1.4f
@@ -83,12 +86,10 @@ class TrainingAudioManager(
             .build()
         soundPool = SoundPool.Builder().setMaxStreams(4).setAudioAttributes(attrs).build()
         try {
-            val resId = context.resources.getIdentifier("tick", "raw", context.packageName)
-            if (resId != 0) tickSoundId = soundPool!!.load(context, resId, 1)
+            if (tickResource != 0) tickSoundId = soundPool!!.load(context, tickResource, 1)
         } catch (_: Exception) {}
         try {
-            val resId = context.resources.getIdentifier("window_end", "raw", context.packageName)
-            if (resId != 0) windowEndSoundId = soundPool!!.load(context, resId, 1)
+            if (windowEndResource != 0) windowEndSoundId = soundPool!!.load(context, windowEndResource, 1)
         } catch (_: Exception) {}
         try {
             trainingFinishedSoundId = soundPool!!.load(context, R.raw.training_finished, 1)
@@ -119,7 +120,7 @@ class TrainingAudioManager(
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )
-                setDataSource(context, android.net.Uri.parse(uriString))
+                setDataSource(context, uriString.toUri())
                 setOnCompletionListener {
                     if (cont.isActive) cont.resume(Unit)
                     release()
@@ -161,12 +162,7 @@ class TrainingAudioManager(
         val params = android.os.Bundle().apply {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volumeCall)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            t.speak(text, TextToSpeech.QUEUE_FLUSH, params, "move_${System.currentTimeMillis()}")
-        } else {
-            @Suppress("DEPRECATION")
-            t.speak(text, TextToSpeech.QUEUE_FLUSH, null)
-        }
+        t.speak(text, TextToSpeech.QUEUE_FLUSH, params, "move_${System.currentTimeMillis()}")
     }
 
     fun playEndBeep() {

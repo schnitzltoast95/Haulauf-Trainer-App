@@ -1,7 +1,7 @@
 package com.example.myapplication.ui
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -20,7 +20,7 @@ import com.example.myapplication.ui.theme.HaulaufTextSecondary
 import java.io.File
 
 fun moveImageModel(context: Context, imagePath: String?, historicalImageRes: Int?): Any? = when {
-    imagePath?.startsWith("content://") == true || imagePath?.startsWith("file://") == true -> Uri.parse(imagePath)
+    imagePath?.startsWith("content://") == true || imagePath?.startsWith("file://") == true -> imagePath.toUri()
     !imagePath.isNullOrBlank() && File(imagePath).exists() -> File(imagePath)
     else -> historicalImageRes
 }
