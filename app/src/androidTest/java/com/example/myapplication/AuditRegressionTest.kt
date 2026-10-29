@@ -300,7 +300,7 @@ class AuditRegressionTest {
                 HomeScreen(preset, DEFAULT_MOVES, {}, {}, {}, {}, {}, {})
             }
         } }
-        compose.onNodeWithText(StringsDe.quickstart).assertHeightIsAtLeast(88.dp)
+        compose.onNodeWithText("Training starten").assertHeightIsAtLeast(88.dp)
         compose.onNodeWithText("Start in 5s", substring = true).assertExists()
         capture("home-start-height")
     }

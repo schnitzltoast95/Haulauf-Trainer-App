@@ -56,6 +56,7 @@ fun HomeScreen(
             .navigationBarsPadding()
     ) {
         val viewportHeight = maxHeight
+        val compactHeader = maxWidth < 340.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,58 +66,44 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = viewportHeight)
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 32.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        LogoSection()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = s.historicalSubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
+                    LogoSection()
+                    if (compactHeader) Spacer(Modifier.weight(1f))
+                    else Column(Modifier.weight(1f)) {
+                        Text(s.appName, style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold)
+                        Text(s.trainer, style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary)
                     }
-                    IconButton(
-                        onClick = onOpenSettings,
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = s.settings,
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = s.settings)
                     }
                 }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    QuickstartButton(
-                        onClick = onQuickstart,
-                        selectedMoveNames = selectedMoveNames
-                    )
-                    CurrentSessionCard(
-                        preset = preset,
-                        selectedMoveNames = selectedMoveNames,
-                        onClick = onEditCurrentSession
-                    )
-                    ConfigureTrainingButton(onClick = onConfigureTraining)
+                if (compactHeader) {
+                    Text(s.appName, modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(s.trainer, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
-
+                Text(s.historicalSubtitle,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                CurrentSessionCard(
+                    preset = preset,
+                    selectedMoveNames = selectedMoveNames,
+                    onClick = onEditCurrentSession,
+                    onStart = onQuickstart
+                )
+                Spacer(Modifier.height(24.dp))
                 LibraryButtonsRow(
                     onOpenPresets = onOpenPresets,
                     onOpenMoveDetails = onOpenMoveDetails
@@ -191,7 +178,7 @@ private fun LogoSection() {
     val logoStroke = MaterialTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
-            .size(80.dp)
+            .size(56.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.verticalGradient(
@@ -200,7 +187,7 @@ private fun LogoSection() {
             ),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(48.dp)) {
+        Canvas(modifier = Modifier.size(36.dp)) {
             val strokeWidth = 4f
             val centerX = size.width / 2
             val centerY = size.height / 2
@@ -219,20 +206,7 @@ private fun LogoSection() {
             )
         }
     }
-    Spacer(modifier = Modifier.height(12.dp))
-    Text(
-        text = LocalStrings.current.appName,
-        style = MaterialTheme.typography.headlineLarge.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 28.sp
-        ),
-        color = MaterialTheme.colorScheme.onSurface
-    )
-    Text(
-        text = LocalStrings.current.trainer,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary
-    )
+
 }
 
 @Composable
@@ -279,7 +253,8 @@ private fun QuickstartButton(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = LocalStrings.current.quickstart,
+                    text = if (LocalStrings.current === StringsDe) "Training starten" else "Start training",
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -294,29 +269,31 @@ private fun QuickstartButton(
 private fun CurrentSessionCard(
     preset: TrainingPreset,
     selectedMoveNames: List<String>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onStart: () -> Unit
 ) {
     val durationStr = formatDuration(preset.estimatedDurationSeconds())
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        onClick = onClick
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             WrappingControls {
                 Text(
                     text = LocalStrings.current.currentSession,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "~$durationStr",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                TextButton(onClick = onClick) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (LocalStrings.current === StringsDe) "Anpassen" else "Adjust")
+                }
             }
+            Text("~$durationStr", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
             WrappingControls {
                 SessionStat(value = preset.rounds.toString(), label = LocalStrings.current.rounds)
@@ -335,6 +312,9 @@ private fun CurrentSessionCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            Spacer(Modifier.height(24.dp))
+            QuickstartButton(onClick = onStart, selectedMoveNames = selectedMoveNames)
+
         }
     }
 }
@@ -353,34 +333,6 @@ private fun SessionStat(value: String, label: String) {
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun ConfigureTrainingButton(onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = null
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Settings,
-            contentDescription = null,
-            modifier = Modifier.size(22.dp),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = LocalStrings.current.configureTraining,
-            style = MaterialTheme.typography.titleMedium
         )
     }
 }
