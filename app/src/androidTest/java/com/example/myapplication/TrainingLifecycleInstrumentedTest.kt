@@ -63,8 +63,9 @@ class TrainingLifecycleInstrumentedTest {
     private fun hasTrainingService(): Boolean = serviceDump().contains("TrainingForegroundService")
 
     private fun serviceDump(): String {
+        val packageName = InstrumentationRegistry.getInstrumentation().targetContext.packageName
         val output = InstrumentationRegistry.getInstrumentation().uiAutomation
-            .executeShellCommand("dumpsys activity services com.example.myapplication")
+            .executeShellCommand("dumpsys activity services $packageName")
             .use { descriptor -> FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() } }
         return output
     }
