@@ -1,5 +1,9 @@
 package com.example.myapplication.ui
 
+import androidx.compose.ui.semantics.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -198,22 +202,23 @@ fun TrainingSetupScreen(
         },
         bottomBar = {
             Surface(
-                color = HaulaufCard,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 tonalElevation = 0.dp,
                 shadowElevation = 8.dp
             ) {
-                Row(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
+                    val actionWidth = if (LocalDensity.current.fontScale > 1.3f || maxWidth < 280.dp) maxWidth else (maxWidth - 12.dp) / 2
+                    WrappingControls {
                     Button(
                         onClick = onStart,
                         enabled = selectedValidIds.isNotEmpty(),
                         modifier = Modifier
-                            .weight(1f)
+                            .width(actionWidth)
                             .heightIn(min = 56.dp),
                         shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(0.dp),
@@ -229,7 +234,7 @@ fun TrainingSetupScreen(
                                 .heightIn(min = 56.dp)
                                 .background(
                                     Brush.verticalGradient(
-                                        colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
+                                        colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
                                     ),
                                     shape = MaterialTheme.shapes.large
                                 )
@@ -241,7 +246,7 @@ fun TrainingSetupScreen(
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -250,11 +255,11 @@ fun TrainingSetupScreen(
                     OutlinedButton(
                         onClick = { saveCopy = false; showSavePresetDialog = true },
                         modifier = Modifier
-                            .weight(1f)
+                            .width(actionWidth)
                             .heightIn(min = 56.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Text(
@@ -263,6 +268,7 @@ fun TrainingSetupScreen(
                             textAlign = TextAlign.Center
                         )
                     }
+                }
                 }
             }
         }
@@ -279,13 +285,13 @@ fun TrainingSetupScreen(
                 Text(
                     text = (if (de) "Dauer ca. " else "About ") + "${durationMinutes}m ${durationSeconds}s",
                     style = MaterialTheme.typography.titleMedium,
-                    color = HaulaufGoldLight
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds) +
                         (if (de) " · Start in ${initialCountdownSec}s" else " · Starts in ${initialCountdownSec}s"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             OutlinedButton(
@@ -309,14 +315,14 @@ fun TrainingSetupScreen(
                 maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall,
-                color = HaulaufTextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (showSelection) {
                 // Select moves
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = CardDefaults.shape,
-                    color = HaulaufCard
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         // Filter moves based on selected tab
@@ -348,7 +354,7 @@ fun TrainingSetupScreen(
                             Text(
                                 text = s.selectMoves,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             TextButton(
                                 onClick = {
@@ -367,7 +373,7 @@ fun TrainingSetupScreen(
                                 Text(
                                     text = if (allVisibleSelected) s.selectNone else s.selectAll,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = HaulaufGoldLight
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -379,13 +385,13 @@ fun TrainingSetupScreen(
                         // Tabs for categories
                         Surface(
                             shape = MaterialTheme.shapes.medium,
-                            color = Color.White.copy(alpha = 0.03f),
-                            border = BorderStroke(1.dp, HaulaufCardBorder)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             TabRow(
                                 selectedTabIndex = selectedCategoryTab,
                                 containerColor = Color.Transparent,
-                                contentColor = HaulaufGoldLight,
+                                contentColor = MaterialTheme.colorScheme.primary,
                                 divider = {},
                                 indicator = { tabPositions ->
                                     TabRowDefaults.SecondaryIndicator(
@@ -393,15 +399,15 @@ fun TrainingSetupScreen(
                                             .tabIndicatorOffset(tabPositions[selectedCategoryTab])
                                             .padding(horizontal = 14.dp),
                                         height = 2.dp,
-                                        color = HaulaufGoldLight
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             ) {
                                 Tab(
                                     selected = selectedCategoryTab == 0,
                                     onClick = { selectedCategoryTab = 0 },
-                                    selectedContentColor = HaulaufGoldLight,
-                                    unselectedContentColor = HaulaufTextSecondary,
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         Text(
                                             "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
@@ -412,8 +418,8 @@ fun TrainingSetupScreen(
                                 Tab(
                                     selected = selectedCategoryTab == 1,
                                     onClick = { selectedCategoryTab = 1 },
-                                    selectedContentColor = HaulaufGoldLight,
-                                    unselectedContentColor = HaulaufTextSecondary,
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         Text(
                                             "${s.haue}\n($selectedHauCount/$totalHauCount)",
@@ -424,8 +430,8 @@ fun TrainingSetupScreen(
                                 Tab(
                                     selected = selectedCategoryTab == 2,
                                     onClick = { selectedCategoryTab = 2 },
-                                    selectedContentColor = HaulaufGoldLight,
-                                    unselectedContentColor = HaulaufTextSecondary,
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         Text(
                                             "${s.huten}\n($selectedHutCount/$totalHutCount)",
@@ -436,8 +442,8 @@ fun TrainingSetupScreen(
                                 Tab(
                                     selected = selectedCategoryTab == 3,
                                     onClick = { selectedCategoryTab = 3 },
-                                    selectedContentColor = HaulaufGoldLight,
-                                    unselectedContentColor = HaulaufTextSecondary,
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     text = {
                                         Text(
                                             "${s.stiche}\n($selectedStichCount/$totalStichCount)",
@@ -479,7 +485,7 @@ fun TrainingSetupScreen(
                                                 onDoubleClick = if (showPriorities) increasePriority else null,
                                                 onLongClick = if (showPriorities) increasePriority else null
                                             ),
-                                        color = Color.White.copy(alpha = 0.02f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.02f)
                                     ) {
                                 Row(
                                     modifier = Modifier
@@ -491,7 +497,7 @@ fun TrainingSetupScreen(
                                     Text(
                                         text = move.displayName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.White.copy(alpha = 0.95f),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.95f),
                                         modifier = Modifier.weight(1f)
                                     )
                                     Row(
@@ -515,7 +521,7 @@ fun TrainingSetupScreen(
                                             Icon(
                                                 imageVector = Icons.Filled.Info,
                                                 contentDescription = s.moveInfo,
-                                                tint = HaulaufTextSecondary,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
@@ -524,7 +530,7 @@ fun TrainingSetupScreen(
                                                 .size(24.dp)
                                                 .border(
                                                     width = 1.dp,
-                                                    color = if (selected) HaulaufGoldLight else HaulaufTextSecondary.copy(alpha = 0.5f),
+                                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                     shape = RectangleShape
                                                 ),
                                             contentAlignment = Alignment.Center
@@ -533,7 +539,7 @@ fun TrainingSetupScreen(
                                                 Icon(
                                                     imageVector = Icons.Filled.Check,
                                                     contentDescription = null,
-                                                    tint = HaulaufGoldLight,
+                                                    tint = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             }
@@ -547,13 +553,13 @@ fun TrainingSetupScreen(
                         Text(
                             text = s.selectionSummary,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                     }
@@ -578,34 +584,31 @@ fun TrainingSetupScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
-                color = HaulaufCard
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    WrappingControls {
                         Text(
                             text = s.reactionInterval,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = s.random,
+                                    text = s.random,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(8.dp))
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.random },
                                 checked = !fixedInterval,
                                 onCheckedChange = { checked -> fixedInterval = !checked },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = Color.DarkGray
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                         }
@@ -616,7 +619,7 @@ fun TrainingSetupScreen(
                         Text(
                             text = s.secondsRange,
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Row(
@@ -630,25 +633,27 @@ fun TrainingSetupScreen(
                                 },
                                 valueRange = 0.05f..5f,
                                 steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).semantics { contentDescription = s.reactionInterval; stateDescription = "%.2f ${s.seconds}".format(intervalSec) },
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = HaulaufGoldLight,
-                                    inactiveTrackColor = Color.DarkGray
+                                    thumbColor = MaterialTheme.colorScheme.onSurface,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                             Text(
                                 text = "%.2fs".format(intervalSec),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = HaulaufGoldLight,
-                                modifier = Modifier.width(48.dp)
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.widthIn(min = 48.dp)
                             )
                         }
                     } else {
                         Text(
                             text = s.minMaxSecondsRange,
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Row(
@@ -657,6 +662,7 @@ fun TrainingSetupScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Slider(
+                                    modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Minimum"; stateDescription = "%.2f ${s.seconds}".format(intervalMinSec) },
                                     value = intervalMinSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->
                                         val n = (v * 20).toInt() / 20f
@@ -666,15 +672,16 @@ fun TrainingSetupScreen(
                                     valueRange = 0.05f..5f,
                                     steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = HaulaufGoldLight,
-                                        inactiveTrackColor = Color.DarkGray
+                                        thumbColor = MaterialTheme.colorScheme.onSurface,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 )
-                                Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                                Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Slider(
+                                    modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Maximum"; stateDescription = "%.2f ${s.seconds}".format(intervalMaxSec) },
                                     value = intervalMaxSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->
                                         intervalMaxSec = ((v * 20).toInt() / 20f).coerceAtLeast(intervalMinSec)
@@ -682,12 +689,12 @@ fun TrainingSetupScreen(
                                     valueRange = 0.05f..5f,
                                     steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = HaulaufGoldLight,
-                                        inactiveTrackColor = Color.DarkGray
+                                        thumbColor = MaterialTheme.colorScheme.onSurface,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 )
-                                Text("%.2fs".format(intervalMaxSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                                Text("%.2fs".format(intervalMaxSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -710,46 +717,48 @@ fun TrainingSetupScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = CardDefaults.shape,
-                    color = HaulaufCard
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
                             text = s.advancedSettings,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.noImmediateRep },
                                 checked = noRep,
                                 onCheckedChange = { noRep = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.noImmediateRep,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.metronome },
                                 checked = metronome,
                                 onCheckedChange = { metronome = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.metronome,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         if (metronome) {
@@ -757,16 +766,17 @@ fun TrainingSetupScreen(
                             Text(
                                 text = s.beatInterval,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = s.beatIntervalHint,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(4.dp))
                             StepperInline(
+                                label = s.beatInterval,
                                 value = metronomeBeats,
                                 onChange = { v -> metronomeBeats = v.coerceIn(1, 32) }
                             )
@@ -774,28 +784,30 @@ fun TrainingSetupScreen(
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.endBeep },
                                 checked = endBeep,
                                 onCheckedChange = { endBeep = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.endBeep,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "${s.countdown} (${s.seconds}, 1-30)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         StepperInline(
+                            label = s.countdown,
                             value = initialCountdownSec.coerceIn(1, 30),
                             onChange = { v -> initialCountdownSec = v.coerceIn(1, 30) }
                         )

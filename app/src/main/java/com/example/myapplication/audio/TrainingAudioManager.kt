@@ -25,6 +25,7 @@ class TrainingAudioManager(
     @RawRes private val tickResource: Int = 0,
     @RawRes private val windowEndResource: Int = 0,
 ) {
+    private val uriPlayer = AsyncUriPlayer(context)
     private var tts: TextToSpeech? = null
     private var ttsSpeechRate: Float = 1.4f
     private var ttsVoiceName: String? = null
@@ -105,43 +106,9 @@ class TrainingAudioManager(
     suspend fun playMoveAudio(move: com.example.myapplication.data.Move, overrideUri: String?) {
         val uri = overrideUri
         if (uri != null) {
-            playFromUri(uri, volumeCall)
+            if (!uriPlayer.play(uri, volumeCall)) playMoveCall(move.displayName)
         } else {
             playMoveCall(move.displayName)
-        }
-    }
-
-    private suspend fun playFromUri(uriString: String, volume: Float) = suspendCancellableCoroutine { cont ->
-        try {
-            val mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build()
-                )
-                setDataSource(context, uriString.toUri())
-                setOnCompletionListener {
-                    if (cont.isActive) cont.resume(Unit)
-                    release()
-                }
-                setOnErrorListener { mp, _, _ ->
-                    mp.release()
-                    if (cont.isActive) cont.resume(Unit)
-                    true
-                }
-                setVolume(volume, volume)
-                prepare()
-                start()
-            }
-            cont.invokeOnCancellation {
-                try {
-                    mediaPlayer.stop()
-                } catch (_: Exception) { }
-                mediaPlayer.release()
-            }
-        } catch (_: Exception) {
-            if (cont.isActive) cont.resume(Unit)
         }
     }
 
@@ -227,12 +194,14 @@ class TrainingAudioManager(
     }
 
     fun stopAll() {
+        uriPlayer.stop()
         signalHandler.removeCallbacksAndMessages(null)
         toneGenerator?.stopTone()
         tts?.stop()
     }
 
     fun release() {
+        uriPlayer.stop()
         signalHandler.removeCallbacksAndMessages(null)
         toneGenerator?.stopTone()
         tts?.stop()

@@ -3,6 +3,12 @@
 Der gemeinsame Funktionsstand ist gebaut und automatisiert getestet. Ergebnisse
 und APK-Prüfsumme stehen in [VALIDATION.md](VALIDATION.md).
 
+## Erledigt: sechs Auditbefunde
+
+Speicherschutz, Bedienhilfen-Kontext, asynchrone Audiovorbereitung, virtuelle
+Übungsbibliothek, anpassbare Layouts und gemeinsame Farbrollen sind umgesetzt.
+Nachweise und Grenzen: [ANDROID_AUDIT.md](ANDROID_AUDIT.md).
+
 ## 1. Praxisprüfung im Training
 
 - Eine vollständige Einheit mit laufender Musik und gesperrtem Bildschirm testen:
@@ -26,7 +32,7 @@ und APK-Prüfsumme stehen in [VALIDATION.md](VALIDATION.md).
 
 ## 3. Release vorbereiten
 
-- Lint-Bereinigung abgeschlossen: 0 Fehler, 0 Warnungen, 0 Hinweise. Diesen Stand bei weiteren �nderungen erhalten.
+- Lint-Bereinigung abgeschlossen: 0 Fehler, 0 Warnungen, 0 Hinweise. Diesen Stand bei weiteren Änderungen erhalten.
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) vollständig durchgehen, einschließlich
   Stimmenwahl und hörbarer Audioausgabe des tatsächlichen Release-Artefakts.
 - Versionsnummer erhöhen, Produktions-APK signieren und Installation beziehungsweise
