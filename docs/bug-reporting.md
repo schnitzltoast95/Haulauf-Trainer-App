@@ -1,14 +1,26 @@
 # Bug reports from the Android app
 
-The floating **Fehler melden / Report bug** button sends a structured text report to
+The floating bug icon opens the **Fehler melden / Report bug** form directly.
+Submitting that form sends a structured text report to
 `schnitzltoast95/Haulauf-Trainer-App` through GitHub's issue API. The reporter
 does not need a GitHub account. The report includes the entered title and
 description, optional reproduction steps and expected behavior, the screen and
 training phase captured when the button was pressed,
 app version, Android version, and device model.
 Reports are public in the repository's Issues tab. Screenshots are not sent.
-The button can be dragged; it follows with a soft spring, docks to the nearest
-side after release, and remembers its side and height across app restarts.
+The button retains its purple appearance using the theme's `primaryContainer`
+and `onPrimaryContainer` colors. It defaults to a compact 48 dp bug icon, flush
+with an edge inside the safe drawing bounds. It can be dragged and follows with
+a soft spring. On release it docks to the nearest of all four edges: left,
+right, top or bottom. The chosen edge, horizontal and vertical position fractions,
+and compact/expanded state persist across app restarts. Older saved left/right
+positions remain the fallback when no new edge preference exists.
+A text action in the form expands or minimizes the button. The expanded button
+has a 12 dp edge margin, includes its label and a separate minimize arrow pointing
+toward its docked edge. Opening the form or changing the button size does not
+submit a report.
+
+Validation: the menu-flow build passed seven unit tests and 27 device tests. A subsequent deletion-style adjustment passed its focused test. After restoring library thumbnails and implementing purple four-edge docking, both APK builds passed and the focused compact-report test passed (4.739 seconds), covering expansion, minimization and dragging to all four edges without submitting a report. Final normal and compact-screen captures were reviewed. A freely positioned overlay can cover underlying content; it can be moved to another edge.
 
 ## Configure a local build
 

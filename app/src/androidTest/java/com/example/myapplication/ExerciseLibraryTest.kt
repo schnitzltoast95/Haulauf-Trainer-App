@@ -184,19 +184,70 @@ class ExerciseLibraryTest {
             compose.onNodeWithText("Übung suchen").performTextInput(move.displayName)
             compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
-            compose.onNodeWithText("Ansage ändern").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
+            compose.onNodeWithText("Audio / Ansage").performClick()
             compose.onNodeWithText(StringsDe.chooseFile).assertExists()
             compose.onNodeWithText("Notizen").assertDoesNotExist()
             compose.onNodeWithContentDescription(StringsDe.back).performClick()
-            compose.onNodeWithText("Notiz hinzufügen").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
+            compose.onNodeWithText("Notizen").performClick()
             compose.onNodeWithText(StringsDe.chooseFile).assertDoesNotExist()
             compose.onNodeWithText(StringsDe.descriptionFieldLabel).assertDoesNotExist()
             compose.onNodeWithText("Notizen").performTextInput("Saved independently")
             compose.onNodeWithText(StringsDe.save).performClick()
-            compose.waitUntil(5000) { compose.onAllNodesWithText("Notizen bearbeiten").fetchSemanticsNodes().isNotEmpty() && runBlocking { repo.exerciseAdditions.first()[move.id]?.notes == "Saved independently" } }
+            compose.waitUntil(5000) { runBlocking { repo.exerciseAdditions.first()[move.id]?.notes == "Saved independently" } }
             compose.onNodeWithText("Saved independently").assertIsDisplayed()
-            compose.onNodeWithText("Notizen bearbeiten").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Übung bearbeiten").assertIsDisplayed()
         } finally { runBlocking { repo.removeCustomMove(move.id) } }
+    }
+
+    @Test fun standardDetailMenuOffersSectionsButProtectsDescription() {
+        var edited: ExerciseSection? = null
+        compose.setContent { MyApplicationTheme(darkTheme = true) {
+            ExerciseDetailScreen(DEFAULT_MOVES.first(), onEdit = { edited = it }, onBack = {}, onPreview = {})
+        } }
+        compose.onNodeWithContentDescription("Ansage anhören").assertExists()
+        compose.onNodeWithContentDescription("Medien hinzufügen").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
+        compose.onNodeWithText("Beschreibung").assertIsNotEnabled()
+        compose.onNodeWithText("Bilder & Videos").performClick()
+        compose.runOnIdle { assertEquals(ExerciseSection.MEDIA, edited) }
+        compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
+        compose.onNodeWithText("Notizen").performClick()
+        compose.runOnIdle { assertEquals(ExerciseSection.NOTES, edited) }
+    }
+
+    @Test fun compactReportCanExpandMinimizeAndDockWithoutSubmitting() {
+        org.junit.Assume.assumeTrue(context.getString(com.example.myapplication.R.string.bug_report_token).isNotBlank())
+        val prefs = context.getSharedPreferences("bug_report_button", android.content.Context.MODE_PRIVATE)
+        val before = prefs.all
+        prefs.edit().putBoolean("compact", true).putString("edge", "right").putBoolean("right", true).putFloat("vertical_fraction", 0.5f).commit()
+        try {
+            compose.setContent { MyApplicationTheme(darkTheme = true) { BugReportOverlay({ "move_details/test" }, "de") } }
+            compose.onNodeWithText("Fehler melden").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Fehler melden. Zum Verschieben ziehen.").performClick()
+            compose.onNodeWithText("Meldebutton vergrößern").performClick()
+            compose.onNodeWithText("Abbrechen").performClick()
+            compose.onNodeWithContentDescription("Meldebutton minimieren").performClick()
+            compose.onNodeWithText("Fehler melden").assertDoesNotExist()
+            compose.runOnIdle { assertTrue(prefs.getBoolean("compact", false)) }
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            listOf(
+                "top" to androidx.compose.ui.geometry.Offset(root.width / 2, 2f),
+                "bottom" to androidx.compose.ui.geometry.Offset(root.width / 2, root.height - 2f),
+                "left" to androidx.compose.ui.geometry.Offset(2f, root.height / 2),
+                "right" to androidx.compose.ui.geometry.Offset(root.width - 2f, root.height / 2)
+            ).forEach { (edge, destination) ->
+                val start = compose.onNodeWithContentDescription("Fehler melden. Zum Verschieben ziehen.").fetchSemanticsNode().boundsInRoot.center
+                compose.onRoot().performTouchInput { swipe(start, destination, 600) }
+                compose.waitForIdle()
+                compose.runOnIdle { assertEquals(edge, prefs.getString("edge", "")) }
+            }
+        } finally {
+            val editor = prefs.edit().clear()
+            before.forEach { (key, value) -> when(value) { is Boolean -> editor.putBoolean(key, value); is Float -> editor.putFloat(key, value); is String -> editor.putString(key, value) } }
+            editor.commit()
+        }
     }
 
     @Test fun replacingResettingAndDeletingAudioCleansOnlyOwnedFiles() = runBlocking {
@@ -229,7 +280,8 @@ class ExerciseLibraryTest {
             compose.onNodeWithText("Übung suchen").performTextInput(move.displayName)
             compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
-            compose.onNodeWithText("Übungsdaten bearbeiten").performClick()
+            compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
+            compose.onNodeWithText("Beschreibung").performClick()
             compose.onNodeWithText(StringsDe.deleteMoveAction).performScrollTo().performClick()
             compose.onNodeWithText(StringsDe.delete, substring = false).performClick()
             compose.waitUntil(5000) { compose.onAllNodesWithText("Übung suchen").fetchSemanticsNodes().isNotEmpty() }

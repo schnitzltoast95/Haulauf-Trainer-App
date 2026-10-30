@@ -161,8 +161,12 @@ fun ExerciseEditor(
             } finally { importing = false }
         }
     }
+    var awaitingInitialPicker by rememberSaveable { mutableStateOf(false) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        val returnToDetail = awaitingInitialPicker
+        awaitingInitialPicker = false
         if (uris.isNotEmpty()) importMedia(uris, true)
+        else if (returnToDetail) onBack()
     }
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { importMedia(listOf(it), false) }
@@ -171,6 +175,7 @@ fun ExerciseEditor(
     LaunchedEffect(Unit) {
         if (section == ExerciseSection.MEDIA && addMediaOnOpen && !initialPickerOpened) {
             initialPickerOpened = true
+            awaitingInitialPicker = true
             imagePicker.launch(arrayOf("image/*", "video/*"))
         }
     }
@@ -274,7 +279,7 @@ fun ExerciseEditor(
             }
             message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            if (section == ExerciseSection.DATA && custom) TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
+            if (section == ExerciseSection.DATA && custom) AppDestructiveTextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction) }
         }
     }
     if (saving) AlertDialog(onDismissRequest = {}, title = { Text(if (de) "Wird gespeichert …" else "Saving …") },
@@ -300,7 +305,7 @@ fun ExerciseEditor(
             confirmButton = { AppDestructiveTextButton(enabled = !deleting, onClick = {
                 deleting = true; deleteError = false
                 onDelete(moveId, { deleting = false; confirmDelete = false; onDeleted() }, { deleting = false; deleteError = true })
-            }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete, color = MaterialTheme.colorScheme.error) } },
+            }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete) } },
             dismissButton = { TextButton(enabled = !deleting, onClick = { confirmDelete = false; deleteError = false }) { Text(s.cancel) } })
     }
 }

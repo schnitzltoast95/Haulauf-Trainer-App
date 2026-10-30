@@ -185,13 +185,9 @@ fun MoveAudioListScreen(
                             Text(move.displayName, style = MaterialTheme.typography.titleMedium)
                             Text(categoryLabel(move.category), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (preview != null && compact) AsyncImage(preview, null, contentScale = ContentScale.Fit, modifier = Modifier.size(64.dp))
-                            if (move.notes.isNotBlank() || move.media.isNotEmpty()) Text(if (s === StringsDe) "Mit eigenen Ergänzungen" else "Personal additions", style = MaterialTheme.typography.bodySmall)
                         }
                         if (selectedIds != null) Checkbox(checked = move.id in selectedIds, onCheckedChange = { onToggle(move.id) },
                             modifier = Modifier.semantics { contentDescription = if (s === StringsDe) "${move.displayName} fürs Training auswählen" else "Select ${move.displayName} for training" })
-                        else IconButton(onClick = { onTestMove(move.id) }) {
-                            Icon(Icons.Filled.PlayArrow, if (s === StringsDe) "${move.displayName} anhören" else "Listen to ${move.displayName}")
-                        }
                     }
                     }
                 }

@@ -148,10 +148,7 @@ fun HaulaufApp(
             val move = allMoves.find { it.id == entry.arguments?.getString("moveId") }
             DisposableEffect(Unit) { onDispose { viewModel.stopExercisePreview() } }
             if (move != null) ExerciseDetailScreen(move,
-                overrideUri = moveOverrides[move.id],
-                standardVoiceLabel = ttsVoiceName?.let { voiceLabel(it, uiLanguage == "de") },
                 onPreview = { viewModel.testMoveAudio(move.id) },
-                onAddMedia = { navController.navigate("move_audio/${move.id}?section=MEDIA&add=true") },
                 onEdit = { section -> navController.navigate("move_audio/${move.id}?section=${section.name}") },
                 onBack = { navController.popBackStack() })
         }

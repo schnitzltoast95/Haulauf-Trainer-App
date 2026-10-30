@@ -1,18 +1,41 @@
 package com.example.myapplication.ui
 
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.widget.MediaController
 import android.widget.VideoView
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -30,18 +53,19 @@ import com.example.myapplication.data.*
 import java.io.File
 
 @Composable
-fun ExerciseMediaPreview(media: ExerciseMedia, number: Int) {
+fun ExerciseMediaPreview(media: ExerciseMedia, number: Int, showLabel: Boolean = true) {
     val de = LocalStrings.current === StringsDe
     var open by remember { mutableStateOf(false) }
     val label = if (media.kind == ExerciseMediaKind.VIDEO) {
         if (de) "Video $number abspielen" else "Play video $number"
     } else if (de) "Bild / GIF $number öffnen" else "Open image / GIF $number"
     if (media.kind == ExerciseMediaKind.VIDEO) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(label) }
+        if (showLabel) AppActionButton(tone = ActionTone.Secondary, onClick = { open = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(label) }
+        else VideoThumbnail(media.path, Modifier.fillMaxWidth().height(240.dp).clickable { open = true }.semantics { contentDescription = label })
     } else {
         Column {
             MediaImage(media.path, label, Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 240.dp).clickable { open = true })
-            TextButton(onClick = { open = true }) { Text(label) }
+            if (showLabel) TextButton(onClick = { open = true }) { Text(label) }
         }
     }
     if (open) Dialog(onDismissRequest = { open = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -69,6 +93,27 @@ private fun MediaImage(path: String, label: String, modifier: Modifier) {
     if (failed) Text(if (de) "Bild nicht verfügbar. Bitte erneut hinzufügen." else "Image unavailable. Please add it again.", color = MaterialTheme.colorScheme.error)
     else AsyncImage(model = if (path.contains("://")) Uri.parse(path) else File(path), imageLoader = loader,
         contentDescription = label, contentScale = ContentScale.Fit, modifier = modifier, onError = { failed = true })
+}
+
+@Composable
+private fun VideoThumbnail(path: String, modifier: Modifier) {
+    val context = LocalContext.current
+    val frame by produceState<Bitmap?>(null, path) {
+        value = withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, if (path.contains("://")) Uri.parse(path) else Uri.fromFile(File(path)))
+                if (android.os.Build.VERSION.SDK_INT >= 27) retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 640, 360)
+                else retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            } catch (_: Exception) { null } finally { retriever.release() }
+        }
+    }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        frame?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
+        Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surface) {
+            Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(4.dp))
+        }
+    }
 }
 
 @Composable
@@ -100,69 +145,110 @@ fun ExerciseDetailScreen(
     move: Move,
     onEdit: ((ExerciseSection) -> Unit)?,
     onBack: () -> Unit,
-    overrideUri: String? = null,
-    standardVoiceLabel: String? = null,
     onPreview: (() -> Unit)? = null,
-    onAddMedia: (() -> Unit)? = null,
 ) {
     val s = LocalStrings.current
     val de = s === StringsDe
-    var showSources by rememberSaveable { mutableStateOf(false) }
-    val scroll = rememberScrollState()
-    Scaffold(topBar = { TopAppBar(title = { Text(move.displayName) }, navigationIcon = {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
-    }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            WrappingControls {
-                Text(categoryLabel(move.category), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                if (onPreview != null) TextButton(onClick = onPreview) { Text(if (de) "Ansage anhören" else "Listen to call") }
+    var showSources by rememberSaveable(move.id) { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    Scaffold(topBar = {
+        TopAppBar(title = { Text(move.displayName) }, navigationIcon = {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
+        }, actions = {
+            if (onPreview != null) OutlinedIconButton(onClick = onPreview) {
+                Icon(Icons.Default.PlayArrow, if (de) "Ansage anhören" else "Listen to call", tint = MaterialTheme.colorScheme.primary)
             }
+            if (onEdit != null) Box {
+                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, if (de) "Übung bearbeiten" else "Edit exercise") }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    listOf(
+                        ExerciseSection.MEDIA to if (de) "Bilder & Videos" else "Images & videos",
+                        ExerciseSection.AUDIO to if (de) "Audio / Ansage" else "Audio / call",
+                        ExerciseSection.NOTES to if (de) "Notizen" else "Notes",
+                        ExerciseSection.DATA to if (de) "Beschreibung" else "Description"
+                    ).forEach { (section, label) ->
+                        DropdownMenuItem(text = { Text(label) }, enabled = section != ExerciseSection.DATA || move.id.startsWith("custom_"),
+                            onClick = { menuOpen = false; onEdit(section) })
+                    }
+                }
+            }
+        })
+    }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            ExerciseGallery(move)
             Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
-            Text(if (de) "Bilder & Videos" else "Images & videos", style = MaterialTheme.typography.titleLarge)
-            move.historicalImageRes?.let {
-                AsyncImage(it, if (de) "Historische Illustration zu ${move.displayName}" else "Historical illustration for ${move.displayName}",
-                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp))
-            }
             if (move.historicalImageRes != null || move.historicalTextSources.isNotEmpty()) {
-                move.historicalNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 TextButton(onClick = { showSources = !showSources }) {
-                    Text(if (de) { if (showSources) "Quellen schließen" else "Quellen und historische Einordnung" } else { if (showSources) "Hide sources" else "Sources and historical context" })
+                    Text(if (de) "Quellen & Einordnung" else "Sources & context", modifier = Modifier.weight(1f, fill = false))
+                    Icon(if (showSources) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        if (de) { if (showSources) "Einklappen" else "Ausklappen" } else { if (showSources) "Collapse" else "Expand" })
                 }
                 if (showSources) MoveHistoricalAttribution(move, showingHistoricalImage = move.historicalImageRes != null)
             }
-            move.media.forEachIndexed { index, item -> key(item.path) { ExerciseMediaPreview(item, index + 1) } }
-            if (move.historicalImageRes == null && move.media.isEmpty()) Text(if (de) "Noch keine Bilder oder Videos." else "No images or videos yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (move.notes.isNotBlank()) {
+                Text(if (de) "Notizen" else "Notes", style = MaterialTheme.typography.titleMedium)
+                Text(move.notes, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}
 
-            HorizontalDivider()
-            Text(if (de) "Notizen" else "Notes", style = MaterialTheme.typography.titleLarge)
-            Text(move.notes.ifBlank { if (de) "Noch keine Notizen zu dieser Übung." else "No notes for this exercise yet." }, style = MaterialTheme.typography.bodyLarge)
-            if (onEdit != null) {
-                HorizontalDivider()
-                Text(if (de) "Bearbeiten" else "Edit", style = MaterialTheme.typography.titleLarge)
-                if (move.id.startsWith("custom_")) OutlinedButton(onClick = { onEdit(ExerciseSection.DATA) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (de) "Übungsdaten bearbeiten" else "Edit exercise details")
-                }
-                WrappingControls {
-                    OutlinedButton(onClick = { onAddMedia?.invoke() ?: onEdit(ExerciseSection.MEDIA) }) {
-                        Text(if (de) "Medien hinzufügen" else "Add media")
-                    }
-                    if (move.media.isNotEmpty()) OutlinedButton(onClick = { onEdit(ExerciseSection.MEDIA) }) {
-                        Text(if (de) "Medien verwalten" else "Manage media")
-                    }
-                }
-                OutlinedButton(onClick = { onEdit(ExerciseSection.NOTES) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (de) { if (move.notes.isBlank()) "Notiz hinzufügen" else "Notizen bearbeiten" }
-                        else { if (move.notes.isBlank()) "Add note" else "Edit notes" })
-                }
-                OutlinedButton(onClick = { onEdit(ExerciseSection.AUDIO) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (de) "Ansage ändern" else "Change call")
-                }
-                Text(if (overrideUri == null) {
-                    if (de) "Ansage: ${standardVoiceLabel ?: "App-Stimme"}" else "Call: ${standardVoiceLabel ?: "App voice"}"
-                } else if (de) "Ansage: eigene Audiodatei / Aufnahme" else "Call: custom audio file / recording",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+@Composable
+private fun ExerciseGallery(move: Move) {
+    val de = LocalStrings.current === StringsDe
+    val context = LocalContext.current
+    val historicalRatio = remember(move.historicalImageRes) {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        move.historicalImageRes?.let { BitmapFactory.decodeResource(context.resources, it, bounds) }
+        if (bounds.outWidth > 0 && bounds.outHeight > 0) bounds.outWidth.toFloat() / bounds.outHeight else 1.3f
+    }
+    val historicalCount = if (move.historicalImageRes != null) 1 else 0
+    val count = historicalCount + move.media.size
+    val pager = rememberPagerState(pageCount = { count })
+    val scope = rememberCoroutineScope()
+    var historicalOpen by remember { mutableStateOf(false) }
+    if (count > 0) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f), key = { index ->
+                if (index < historicalCount) "historical" else move.media[index - historicalCount].path
+            }) { index ->
+                if (index < historicalCount) AsyncImage(move.historicalImageRes,
+                    if (de) "Historische Illustration öffnen" else "Open historical illustration", contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(historicalRatio).clickable { historicalOpen = true })
+                else ExerciseMediaPreview(move.media[index - historicalCount], index + 1, showLabel = false)
             }
 
+        }
+        if (pager.currentPage < historicalCount) move.historicalNote?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (count > 1) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(count) { index ->
+                    val selected = pager.currentPage == index
+                    Box(Modifier.size(52.dp).border(if (selected) 2.dp else 1.dp,
+                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                        .clickable { scope.launch { pager.animateScrollToPage(index) } }
+                        .semantics { contentDescription = if (de) "Medium ${index + 1} anzeigen" else "Show media ${index + 1}"; this.selected = selected }
+                        .padding(4.dp), contentAlignment = Alignment.Center) {
+                        if (index < historicalCount) AsyncImage(move.historicalImageRes, null, contentScale = ContentScale.Fit)
+                        else {
+                            val media = move.media[index - historicalCount]
+                            if (media.kind == ExerciseMediaKind.IMAGE) MediaImage(media.path, "", Modifier.fillMaxSize())
+                            else VideoThumbnail(media.path, Modifier.fillMaxSize())
+                        }
+                    }
+                }
+            }
+            Text("${pager.currentPage + 1} / $count", modifier = Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+    if (historicalOpen) Dialog(onDismissRequest = { historicalOpen = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.safeDrawingPadding().padding(16.dp)) {
+                TextButton(onClick = { historicalOpen = false }) { Text(if (de) "Schließen" else "Close") }
+                AsyncImage(move.historicalImageRes, move.displayName, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().weight(1f))
+            }
         }
     }
 }
