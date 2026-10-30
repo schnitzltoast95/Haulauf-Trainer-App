@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,11 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Move
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.ui.theme.HaulaufCard
@@ -112,17 +109,12 @@ private fun LibraryButtonsRow(
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val buttonWidth = if (maxWidth < 340.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) maxWidth else (maxWidth - 12.dp) / 2
         WrappingControls {
-        OutlinedButton(
+        AppActionButton(
             onClick = onOpenPresets,
             modifier = Modifier
                 .width(buttonWidth)
                 .heightIn(min = 56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            border = null
+            tone = ActionTone.Secondary
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.List,
@@ -136,17 +128,12 @@ private fun LibraryButtonsRow(
                 style = MaterialTheme.typography.titleMedium
             )
         }
-        OutlinedButton(
+        AppActionButton(
             onClick = onOpenMoveDetails,
             modifier = Modifier
                 .width(buttonWidth)
                 .heightIn(min = 56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            border = null
+            tone = ActionTone.Secondary
         ) {
             Icon(
                 imageVector = Icons.Filled.Edit,
@@ -198,62 +185,6 @@ private fun LogoSection() {
         }
     }
 
-}
-
-@Composable
-private fun QuickstartButton(
-    onClick: () -> Unit,
-    selectedMoveNames: List<String>
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 88.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent
-        ),
-        contentPadding = PaddingValues(0.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 8.dp,
-            pressedElevation = 4.dp
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 88.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
-                    ),
-                    RoundedCornerShape(16.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (LocalStrings.current === StringsDe) "Training starten" else "Start training",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -311,7 +242,9 @@ private fun CurrentSessionCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(24.dp))
-                QuickstartButton(onStart, selectedMoveNames)
+                AppLaunchButton(onClick = onStart,
+                    label = if (de) "Training starten" else "Start training",
+                    modifier = Modifier.fillMaxWidth(), showPlayIcon = true)
             }
         }
     }

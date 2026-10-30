@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Move
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.ui.theme.HaulaufCard
-import com.example.myapplication.ui.theme.HaulaufGoldDark
 import com.example.myapplication.ui.theme.HaulaufGoldLight
 import com.example.myapplication.ui.theme.HaulaufTextSecondary
 
@@ -101,7 +100,7 @@ fun PresetLibraryScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = HaulaufTextSecondary
                     )
-                    Button(onClick = onCreateNew) { Text(s.newTraining) }
+                    AppActionButton(onClick = onCreateNew) { Text(s.newTraining) }
                     Text(
                         text = s.noSavedPresetsHint,
                         style = MaterialTheme.typography.bodySmall,
@@ -179,13 +178,13 @@ fun PresetLibraryScreen(
             title = { Text(strings.deletePreset) },
             text = { Text(strings.deletePresetConfirm.format(preset.name)) },
             confirmButton = {
-                TextButton(
+                AppDestructiveTextButton(
                     onClick = {
                         onDeletePreset(preset)
                         showDeleteDialog = null
                     }
                 ) {
-                    Text(strings.delete, color = MaterialTheme.colorScheme.error)
+                    Text(strings.delete)
                 }
             },
             dismissButton = {
@@ -309,16 +308,13 @@ private fun PresetCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val actionWidth = if (maxWidth < 320.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
+                    maxWidth else (maxWidth - 8.dp) / 2
+                WrappingControls {
+                AppActionButton(
                     onClick = if (selectedMoves.isEmpty()) onEdit else onStart,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = HaulaufGoldDark
-                    )
+                    modifier = Modifier.width(actionWidth).heightIn(min = 72.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
@@ -326,18 +322,16 @@ private fun PresetCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (selectedMoves.isEmpty()) { if (de) "Übungen wählen" else "Select exercises" } else s.start)
+                    Text(if (selectedMoves.isEmpty()) { if (de) "Übungen wählen" else "Select exercises" } else s.start,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
-                OutlinedButton(
+                AppActionButton(
                     onClick = onEdit,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color.White
-                    )
+                    modifier = Modifier.width(actionWidth).heightIn(min = 72.dp), tone = ActionTone.Secondary
                 ) {
-                    Text(s.edit, maxLines = 1)
+                    Text(s.edit)
                 }
-
+                }
             }
         }
     }

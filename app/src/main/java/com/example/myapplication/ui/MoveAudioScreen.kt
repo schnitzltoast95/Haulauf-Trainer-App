@@ -41,14 +41,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -71,7 +68,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -112,7 +108,7 @@ fun MoveAudioListScreen(
     Scaffold(
         bottomBar = {
             if (onApplySelection != null) Surface {
-                Button(onClick = onApplySelection, modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
+                AppActionButton(onClick = onApplySelection, modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
                     val count = selectedIds.orEmpty().size
                     Text(if (s === StringsDe) { if (count == 1) "1 Übung übernehmen" else "$count Übungen übernehmen" }
                         else { if (count == 1) "Use 1 exercise" else "Use $count exercises" })
@@ -280,12 +276,5 @@ private fun CategoryButton(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    ) {
-        Text(label, fontSize = 12.sp)
-    }
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }

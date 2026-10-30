@@ -32,14 +32,11 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
@@ -68,7 +65,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
@@ -80,7 +76,6 @@ import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.ui.theme.HaulaufCard
 import com.example.myapplication.ui.theme.HaulaufCardBorder
 import com.example.myapplication.ui.theme.HaulaufGold
-import com.example.myapplication.ui.theme.HaulaufGoldDark
 import com.example.myapplication.ui.theme.HaulaufGoldLight
 import com.example.myapplication.ui.theme.HaulaufTextSecondary
 import androidx.compose.foundation.layout.width
@@ -215,53 +210,18 @@ fun TrainingSetupScreen(
                 ) {
                     val actionWidth = if (LocalDensity.current.fontScale > 1.3f || maxWidth < 280.dp) maxWidth else (maxWidth - 12.dp) / 2
                     WrappingControls {
-                    Button(
+                    AppLaunchButton(
                         onClick = onStart,
                         enabled = selectedValidIds.isNotEmpty(),
-                        modifier = Modifier
-                            .width(actionWidth)
-                            .heightIn(min = 88.dp),
-                        shape = MaterialTheme.shapes.large,
-                        contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 8.dp,
-                            pressedElevation = 4.dp
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 88.dp)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(MaterialTheme.colorScheme.primary, HaulaufGoldDark)
-                                    ),
-                                    shape = MaterialTheme.shapes.large
-                                )
-                                .padding(horizontal = 12.dp, vertical = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (savedName != null) { if (de) "Nur diesmal starten" else "Start this time" } else s.startTraining,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+                        modifier = Modifier.width(actionWidth),
+                        label = if (savedName != null) { if (de) "Nur diesmal starten" else "Start this time" } else s.startTraining
+                    )
 
-                    OutlinedButton(
+                    AppActionButton(
                         onClick = { saveCopy = false; showSavePresetDialog = true },
-                        modifier = Modifier
-                            .width(actionWidth)
-                            .heightIn(min = 88.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
+                        modifier = Modifier.width(actionWidth),
+                        tone = ActionTone.Secondary,
+                        size = ActionSize.Prominent
                     ) {
                         Text(
                             text = if (savedName != null) s.save else s.savePreset,
@@ -295,7 +255,7 @@ fun TrainingSetupScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            OutlinedButton(
+            AppActionButton(tone = ActionTone.Secondary, 
                 onClick = { if (onBrowseExercises != null) onBrowseExercises() else showSelection = !showSelection },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
@@ -712,7 +672,7 @@ fun TrainingSetupScreen(
                 onChange = { v -> pauseSec = v.coerceAtLeast(0).toFloat() }
             )
 
-            OutlinedButton(onClick = { showAdvanced = !showAdvanced }, modifier = Modifier.fillMaxWidth()) {
+            AppActionButton(onClick = { showAdvanced = !showAdvanced }, modifier = Modifier.fillMaxWidth(), tone = ActionTone.Secondary) {
                 Text(if (showAdvanced) { if (de) "Erweitert schließen" else "Hide advanced" } else s.advancedSettings)
             }
 

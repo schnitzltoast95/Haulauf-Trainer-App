@@ -213,7 +213,7 @@ fun ExerciseEditor(
         topBar = { TopAppBar(title = { Text(exerciseSectionTitle(section, de)) },
             navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) } }) },
         bottomBar = {
-            Surface { Button(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && !importing && !deleting && recorder == null,
+            Surface { AppActionButton(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && !importing && !deleting && recorder == null,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
                 Text(if (saving) { if (de) "Wird gespeichert …" else "Saving …" } else s.save)
             } }
@@ -250,25 +250,25 @@ fun ExerciseEditor(
                     }
                 }
             }
-            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*", "video/*")) }, enabled = recorder == null && !importing,
+            AppActionButton(tone = ActionTone.Secondary, onClick = { imagePicker.launch(arrayOf("image/*", "video/*")) }, enabled = recorder == null && !importing,
                 modifier = Modifier.fillMaxWidth()) { Text(if (de) "Bilder / Videos hinzufügen" else "Add images / videos") }
             }
             if (section == ExerciseSection.AUDIO) {
                 Text(if (audioUri == null) {
                     if (de) "App-Stimme${standardVoiceLabel?.let { ": $it" }.orEmpty()}" else "App voice${standardVoiceLabel?.let { ": $it" }.orEmpty()}"
                 } else if (de) "Eigene Audiodatei / Aufnahme" else "Custom audio file / recording", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) {
+                AppActionButton(tone = ActionTone.Secondary, onClick = { onPreview(draft, audioUri) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) {
                     Text(if (de) "Ansage anhören" else "Listen to call")
                 }
                 if (audioUri != null) TextButton(onClick = { audioUri = null; status(null) }, enabled = recorder == null) {
                     Text(if (de) "App-Stimme verwenden" else "Use app voice")
                 }
-                Button(onClick = {
+                AppActionButton(onClick = {
                     if (recorder != null) stopRecording()
                     else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording()
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (recorder != null) s.stopRecording else s.newRecording) }
-                OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
+                AppActionButton(tone = ActionTone.Secondary, onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
                 Text(if (de) "Die App-Stimme gilt für alle Übungen und wird in den Einstellungen gewählt. Hier kannst du eine eigene Aufnahme oder Datei verwenden."
                     else "The app voice applies to all exercises and is chosen in settings. Here you can use your own recording or file.", style = MaterialTheme.typography.bodyMedium)
             }
@@ -297,7 +297,7 @@ fun ExerciseEditor(
                 if (affected.isNotEmpty()) Text((if (de) "Wird auch aus diesen Trainings entfernt: " else "Also removed from these trainings: ") + affected.joinToString { it.name })
                 if (deleteError) Text(if (de) "Löschen fehlgeschlagen. Bitte erneut versuchen." else "Delete failed. Please try again.", color = MaterialTheme.colorScheme.error)
             } },
-            confirmButton = { TextButton(enabled = !deleting, onClick = {
+            confirmButton = { AppDestructiveTextButton(enabled = !deleting, onClick = {
                 deleting = true; deleteError = false
                 onDelete(moveId, { deleting = false; confirmDelete = false; onDeleted() }, { deleting = false; deleteError = true })
             }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete, color = MaterialTheme.colorScheme.error) } },
