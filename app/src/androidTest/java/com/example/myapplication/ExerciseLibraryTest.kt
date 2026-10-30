@@ -185,12 +185,12 @@ class ExerciseLibraryTest {
             compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
             compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
-            compose.onNodeWithText("Audio / Ansage").performClick()
+            compose.onNodeWithText("Ansage bearbeiten").performClick()
             compose.onNodeWithText(StringsDe.chooseFile).assertExists()
             compose.onNodeWithText("Notizen").assertDoesNotExist()
             compose.onNodeWithContentDescription(StringsDe.back).performClick()
             compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
-            compose.onNodeWithText("Notizen").performClick()
+            compose.onNodeWithText("Notizen bearbeiten").performClick()
             compose.onNodeWithText(StringsDe.chooseFile).assertDoesNotExist()
             compose.onNodeWithText(StringsDe.descriptionFieldLabel).assertDoesNotExist()
             compose.onNodeWithText("Notizen").performTextInput("Saved independently")
@@ -209,11 +209,11 @@ class ExerciseLibraryTest {
         compose.onNodeWithContentDescription("Ansage anhören").assertExists()
         compose.onNodeWithContentDescription("Medien hinzufügen").assertDoesNotExist()
         compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
-        compose.onNodeWithText("Beschreibung").assertIsNotEnabled()
-        compose.onNodeWithText("Bilder & Videos").performClick()
+        compose.onNodeWithText("Beschreibung bearbeiten").assertIsNotEnabled()
+        compose.onNodeWithText("Medien bearbeiten").performClick()
         compose.runOnIdle { assertEquals(ExerciseSection.MEDIA, edited) }
         compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
-        compose.onNodeWithText("Notizen").performClick()
+        compose.onNodeWithText("Notizen bearbeiten").performClick()
         compose.runOnIdle { assertEquals(ExerciseSection.NOTES, edited) }
     }
 
@@ -281,7 +281,7 @@ class ExerciseLibraryTest {
             compose.waitUntil(5000) { compose.onAllNodes(hasText(move.displayName) and !hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText(move.displayName) and !hasSetTextAction()).performClick()
             compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
-            compose.onNodeWithText("Beschreibung").performClick()
+            compose.onNodeWithText("Beschreibung bearbeiten").performClick()
             compose.onNodeWithText(StringsDe.deleteMoveAction).performScrollTo().performClick()
             compose.onNodeWithText(StringsDe.delete, substring = false).performClick()
             compose.waitUntil(5000) { compose.onAllNodesWithText("Übung suchen").fetchSemanticsNodes().isNotEmpty() }

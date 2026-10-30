@@ -162,10 +162,10 @@ fun ExerciseDetailScreen(
                 IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, if (de) "Übung bearbeiten" else "Edit exercise") }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     listOf(
-                        ExerciseSection.MEDIA to if (de) "Bilder & Videos" else "Images & videos",
-                        ExerciseSection.AUDIO to if (de) "Audio / Ansage" else "Audio / call",
-                        ExerciseSection.NOTES to if (de) "Notizen" else "Notes",
-                        ExerciseSection.DATA to if (de) "Beschreibung" else "Description"
+                        ExerciseSection.MEDIA to if (de) "Medien bearbeiten" else "Edit media",
+                        ExerciseSection.AUDIO to if (de) "Ansage bearbeiten" else "Edit call",
+                        ExerciseSection.NOTES to if (de) "Notizen bearbeiten" else "Edit notes",
+                        ExerciseSection.DATA to if (de) "Beschreibung bearbeiten" else "Edit description"
                     ).forEach { (section, label) ->
                         DropdownMenuItem(text = { Text(label) }, enabled = section != ExerciseSection.DATA || move.id.startsWith("custom_"),
                             onClick = { menuOpen = false; onEdit(section) })
