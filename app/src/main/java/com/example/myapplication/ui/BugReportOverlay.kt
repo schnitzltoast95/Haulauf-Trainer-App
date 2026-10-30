@@ -67,9 +67,7 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
     var open by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var steps by remember { mutableStateOf("") }
-    var expected by remember { mutableStateOf("") }
-    var reportingRoute by remember { mutableStateOf("home") }
+    var reportContext by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     var sent by remember { mutableStateOf(false) }
@@ -125,7 +123,7 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
             color = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             onClick = {
-                reportingRoute = context()
+                reportContext = context()
                 feedback = null
                 open = true
             },
@@ -196,8 +194,8 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
                             else { if (compact) "Expand report button" else "Minimize report button" })
                     }
                     Text(
-                        if (german) "Beschreibe, was passiert ist. Ansicht, Trainingsphase, App- und Android-Version sowie Gerätemodell werden mitgesendet. Der Bericht erscheint öffentlich auf GitHub."
-                        else "Describe what happened. Screen, training phase, app and Android versions, and device model will be sent. The report will be public on GitHub.",
+                        if (german) "Beschreibe, was passiert ist. Wenn du magst, ergänze Schritte zum Nachstellen und was stattdessen passieren sollte. Das hilft uns beim Beheben."
+                        else "Describe what happened. If you can, add steps to reproduce it and what should have happened. That helps us fix it.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
@@ -210,22 +208,8 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
                     OutlinedTextField(
                         value = description,
                         onValueChange = { if (it.length <= 5000) description = it },
-                        label = { Text(if (german) "Was ist passiert?" else "What happened?") },
-                        minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = steps,
-                        onValueChange = { if (it.length <= 2000) steps = it },
-                        label = { Text(if (german) "Schritte zum Nachstellen (optional)" else "Steps to reproduce (optional)") },
-                        minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = expected,
-                        onValueChange = { if (it.length <= 1000) expected = it },
-                        label = { Text(if (german) "Was sollte passieren? (optional)" else "Expected result (optional)") },
-                        minLines = 2,
+                        label = { Text(if (german) "Bericht" else "Report") },
+                        minLines = 4,
                         modifier = Modifier.fillMaxWidth()
                     )
                     if (feedback != null) Text(feedback!!, color = MaterialTheme.colorScheme.error)
@@ -239,14 +223,12 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
                         feedback = null
                         scope.launch {
                             val result = BugReportClient.submit(
-                                localContext.applicationContext, title, description, steps, expected, reportingRoute
+                                localContext.applicationContext, title, description, reportContext
                             )
                             sending = false
                             if (result.isSuccess) {
                                 title = ""
                                 description = ""
-                                steps = ""
-                                expected = ""
                                 open = false
                                 sent = true
                             } else {

@@ -2,6 +2,7 @@ package com.example.myapplication.ui
 
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import com.example.myapplication.data.ExerciseSection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -46,6 +48,21 @@ fun HaulaufApp(
 
     val strings = remember(uiLanguage) {
         if (uiLanguage == "en") StringsEn else StringsDe
+    }
+    val bugReportTrail = remember { BugReportTrail() }
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, arguments ->
+            bugReportTrail.record(
+                destination.route ?: "home",
+                arguments?.getString("section"),
+                arguments?.getString("moveId")
+            )
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.trainingState.collect { bugReportTrail.recordTrainingState(it) }
     }
 
     CompositionLocalProvider(LocalStrings provides strings) {
@@ -202,10 +219,13 @@ fun HaulaufApp(
     BugReportOverlay(
         context = {
             val entry = navController.currentBackStackEntry
+            val route = entry?.destination?.route ?: "home"
+            val section = entry?.arguments?.getString("section")
+            val moveId = entry?.arguments?.getString("moveId")
+            bugReportTrail.record(route, section, moveId)
             bugReportContext(
-                entry?.destination?.route ?: "home",
-                entry?.arguments?.getString("section"),
-                viewModel.trainingState.value
+                route, section, moveId, viewModel.trainingState.value,
+                bugReportTrail.beforeCurrent(), bugReportTrail.recentTrainingPhases()
             )
         },
         language = uiLanguage

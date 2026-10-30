@@ -3,10 +3,12 @@
 The floating bug icon opens the **Fehler melden / Report bug** form directly.
 Submitting that form sends a structured text report to
 `schnitzltoast95/Haulauf-Trainer-App` through GitHub's issue API. The reporter
-does not need a GitHub account. The report includes the entered title and
-description, optional reproduction steps and expected behavior, the screen and
-training phase captured when the button was pressed,
-app version, Android version, and device model.
+does not need a GitHub account. The form has two fields: a short title and a
+report. Its hint invites the reporter to add reproduction steps and expected
+behavior in the report if useful. The issue includes the screen before the form
+opened, up to five previously visited screens, recent training phases, the app
+version, Android version, and device model. Only navigation and training phases
+are recorded; taps and edits within a screen are not tracked.
 Reports are public in the repository's Issues tab. Screenshots are not sent.
 The button retains its purple appearance using the theme's `primaryContainer`
 and `onPrimaryContainer` colors. It defaults to a compact 48 dp bug icon, flush
