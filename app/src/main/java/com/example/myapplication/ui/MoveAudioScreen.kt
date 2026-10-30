@@ -14,6 +14,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,14 +35,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -64,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -151,7 +148,7 @@ fun MoveAudioListScreen(
                     })
                 }
             }
-            Button(onClick = { showAddMoveDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(s.addMove) }
+            AppActionButton(onClick = { showAddMoveDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(s.addMove) }
             }
             }
             if (visible.isEmpty()) item { Text(if (s === StringsDe) "Keine passenden Übungen." else "No matching exercises.") }
@@ -187,11 +184,11 @@ fun MoveAudioListScreen(
                                 maxLines = 2
                             )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            val actionWidth = if (maxWidth < 300.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
+                                maxWidth else (maxWidth - 8.dp) / 2
+                            WrappingControls {
+                            AppActionButton(
                                 onClick = {
                                     onTestMove(move.id)
                                     scope.launch {
@@ -200,22 +197,22 @@ fun MoveAudioListScreen(
                                         )
                                     }
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.width(actionWidth).heightIn(min = 72.dp), tone = ActionTone.Secondary
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.PlayArrow,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(s.test, fontSize = 12.sp)
+                                Text(s.test)
                             }
-                            Button(
+                            AppActionButton(
                                 onClick = { onOpenMoveDetails(move.id) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.width(actionWidth).heightIn(min = 72.dp)
                             ) {
-                                Text(s.editMove, fontSize = 12.sp)
+                                Text(s.editMove)
+                            }
                             }
                         }
                     }
@@ -301,12 +298,5 @@ private fun CategoryButton(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    ) {
-        Text(label, fontSize = 12.sp)
-    }
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }

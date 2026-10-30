@@ -221,7 +221,7 @@ fun ExerciseEditor(
         topBar = { TopAppBar(title = { Text(if (custom) { if (de) "Eigene Übung" else "Custom exercise" } else move.displayName) },
             navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) } }) },
         bottomBar = {
-            Surface { Button(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && recorder == null,
+            Surface { AppActionButton(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && recorder == null,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
                 Text(if (saving) { if (de) "Wird gespeichert …" else "Saving …" } else s.save)
             } }
@@ -245,24 +245,24 @@ fun ExerciseEditor(
                 }
             } else Text(if (de) "Standardübung · eigene Anpassungen sind wiederherstellbar" else "Standard exercise · customizations can be reset", style = MaterialTheme.typography.bodyMedium)
             OutlinedTextField(value = description, onValueChange = { description = it; status(null) }, label = { Text(s.descriptionFieldLabel) }, minLines = 3, modifier = Modifier.fillMaxWidth())
-            OutlinedButton(onClick = { onPreview(draft, audioUri) }, enabled = title.isNotBlank() && recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.testPlayback) }
+            AppActionButton(tone = ActionTone.Secondary, onClick = { onPreview(draft, audioUri) }, enabled = title.isNotBlank() && recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.testPlayback) }
             Text(if (audioUri == null) s.defaultAudioEnabled else s.customAudioEnabled, style = MaterialTheme.typography.bodySmall)
             message?.let { Text(it, color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) {
+            AppActionButton(tone = ActionTone.Secondary, onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (advanced) { if (de) "Medien schließen" else "Hide media" } else { if (de) "Audio und Bild anpassen" else "Customize audio and image" })
             }
             if (advanced) {
                 Text(s.audio, style = MaterialTheme.typography.titleMedium)
-                Button(onClick = {
+                AppActionButton(onClick = {
                     if (recorder != null) stopRecording()
                     else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording()
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
                 }, modifier = Modifier.fillMaxWidth()) { Text(if (recorder != null) s.stopRecording else s.newRecording) }
-                OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
+                AppActionButton(tone = ActionTone.Secondary, onClick = { audioPicker.launch(arrayOf("audio/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseFile) }
                 TextButton(onClick = { audioUri = null; status(null) }, enabled = audioUri != null && recorder == null) { Text(s.resetToDefault) }
                 if (imageModel != null) AsyncImage(imageModel, s.image, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp))
-                OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseImage) }
+                AppActionButton(tone = ActionTone.Secondary, onClick = { imagePicker.launch(arrayOf("image/*")) }, enabled = recorder == null, modifier = Modifier.fillMaxWidth()) { Text(s.chooseImage) }
                 if (imagePath != null) TextButton(onClick = { imagePath = null; status(null) }) { Text(s.removeImage) }
             }
             MoveHistoricalAttribution(move, showingHistoricalImage = advanced && imageModel != null && imageModel == move.historicalImageRes)
@@ -271,7 +271,7 @@ fun ExerciseEditor(
                 description = original.description.orEmpty(); imagePath = null; audioUri = null
                 status(if (de) "Original vorbereitet. Mit Speichern übernehmen." else "Original restored in draft. Save to apply.")
             }) { Text(if (de) "Original wiederherstellen" else "Restore original") }
-            else TextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction, color = MaterialTheme.colorScheme.error) }
+            else AppDestructiveTextButton(onClick = { confirmDelete = true }, enabled = !saving && recorder == null) { Text(s.deleteMoveAction) }
         }
     }
     if (saving) AlertDialog(onDismissRequest = {}, title = { Text(if (de) "Wird gespeichert …" else "Saving …") },
@@ -291,10 +291,10 @@ fun ExerciseEditor(
                 if (affected.isNotEmpty()) Text((if (de) "Wird auch aus diesen Trainings entfernt: " else "Also removed from these trainings: ") + affected.joinToString { it.name })
                 if (deleteError) Text(if (de) "Löschen fehlgeschlagen. Bitte erneut versuchen." else "Delete failed. Please try again.", color = MaterialTheme.colorScheme.error)
             } },
-            confirmButton = { TextButton(enabled = !deleting, onClick = {
+            confirmButton = { AppDestructiveTextButton(enabled = !deleting, onClick = {
                 deleting = true; deleteError = false
                 onDelete(moveId, { deleting = false; confirmDelete = false; onBack() }, { deleting = false; deleteError = true })
-            }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete, color = MaterialTheme.colorScheme.error) } },
+            }) { Text(if (deleting) { if (de) "Wird gelöscht …" else "Deleting …" } else s.delete) } },
             dismissButton = { TextButton(enabled = !deleting, onClick = { confirmDelete = false; deleteError = false }) { Text(s.cancel) } })
     }
 }
