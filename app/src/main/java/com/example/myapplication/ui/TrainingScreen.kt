@@ -69,50 +69,47 @@ fun TrainingScreen(
                 return@Column
             }
             if (s is TrainingState.StartCountdown) {
-                OutlinedButton(
+                AppActionButton(
                     onClick = {
                         isStopping = true
                         onStop()
                     },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(), tone = ActionTone.Secondary, size = ActionSize.Glove
                 ) { Text(strings.cancel, style = MaterialTheme.typography.headlineSmall) }
             } else if (s is TrainingState.Paused) {
-                Button(
+                AppActionButton(
                     onClick = onResume,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    size = ActionSize.Glove
                 ) { Text(strings.resume, style = MaterialTheme.typography.headlineSmall) }
                 Spacer(modifier = Modifier.height(20.dp))
             } else if (s !is TrainingState.Finished && s !is TrainingState.Idle) {
-                Button(
+                AppActionButton(
                     onClick = onPause,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    size = ActionSize.Glove
                 ) { Text(strings.pause, style = MaterialTheme.typography.headlineSmall) }
                 Spacer(modifier = Modifier.height(20.dp))
             }
             if (s is TrainingState.Finished) {
-                OutlinedButton(
+                AppActionButton(
                     onClick = onRestart,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    tone = ActionTone.Secondary,
+                    size = ActionSize.Glove
                 ) {
                     Text(strings.restartTraining, style = MaterialTheme.typography.headlineSmall)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
             }
-            if (s is TrainingState.Paused || s is TrainingState.Finished) OutlinedButton(
+            if (s is TrainingState.Paused || s is TrainingState.Finished) AppActionButton(
                 onClick = {
                     isStopping = true
                     onStop()
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 96.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                modifier = Modifier.fillMaxWidth(),
+                tone = ActionTone.Destructive,
+                size = ActionSize.Glove
             ) {
                 val endLabel = if (s is TrainingState.Finished) strings.endTraining else strings.stop
                 Text(endLabel, style = MaterialTheme.typography.headlineSmall)
