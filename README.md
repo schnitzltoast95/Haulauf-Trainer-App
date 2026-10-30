@@ -41,6 +41,8 @@ Open in Android Studio for development.
 
 Before the next signed release build, complete [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), including the audio check on the release candidate.
 
+Every future release also includes a short German showcase video made with the `brag` skill: real app footage, the changes since the previous release, and a matching poster. Follow the video section of the checklist and publish these assets with the APK.
+
 ### Next release: 1.2.0 (versionCode 3)
 
 This is preparation, not a published or fully approved release. The published 1.1.0 used versionCode 2; its historical checks are in [release-records/v1.1.0.md](release-records/v1.1.0.md). Track current release evidence separately in [release-records/v1.2.0.md](release-records/v1.2.0.md).
