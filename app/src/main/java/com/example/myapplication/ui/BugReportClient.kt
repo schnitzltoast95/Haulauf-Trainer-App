@@ -16,9 +16,7 @@ internal object BugReportClient {
         context: Context,
         title: String,
         description: String,
-        steps: String,
-        expected: String,
-        screenContext: String
+        reportContext: String
     ): Result<String> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -26,17 +24,11 @@ internal object BugReportClient {
                 require(token.isNotBlank()) { "Bug reporting is not configured" }
                 val body = buildString {
                     appendLine("<!-- haulauf-app-bug-report:v1 -->")
-                    appendLine("## Tatsächliches Verhalten")
+                    appendLine("## Bericht")
                     appendLine(description.trim())
                     appendLine()
-                    appendLine("## Schritte zum Nachstellen")
-                    appendLine(steps.trim().ifBlank { "Nicht angegeben" })
-                    appendLine()
-                    appendLine("## Erwartetes Verhalten")
-                    appendLine(expected.trim().ifBlank { "Nicht angegeben" })
-                    appendLine()
                     appendLine("## App-Informationen")
-                    appendLine("- Ansicht beim Tippen auf den Meldebutton: `${screenContext.replace('`', ' ')}`")
+                    appendLine(reportContext)
                     val version = context.packageManager
                         .getPackageInfo(context.packageName, 0).versionName ?: "unbekannt"
                     appendLine("- App-Version: $version")
