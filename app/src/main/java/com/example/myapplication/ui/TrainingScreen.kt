@@ -1,6 +1,8 @@
 package com.example.myapplication.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,9 +30,18 @@ fun TrainingScreen(
     val strings = LocalStrings.current
     val s by state.collectAsState()
     var isStopping by remember { mutableStateOf(false) }
+    BackHandler {
+        if (s is TrainingState.StartCountdown || s is TrainingState.Paused || s is TrainingState.Finished || s is TrainingState.Idle) {
+            isStopping = true
+            onStop()
+        } else onPause()
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
+    val statusHeight = (maxHeight - 288.dp).coerceAtLeast(180.dp)
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -38,7 +49,7 @@ fun TrainingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(2f),
+                .heightIn(min = statusHeight),
             contentAlignment = Alignment.Center
         ) {
             if (isStopping) {
@@ -51,54 +62,60 @@ fun TrainingScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .heightIn(min = 240.dp),
             verticalArrangement = Arrangement.Center
         ) {
             if (isStopping) {
                 return@Column
             }
-            if (s is TrainingState.Paused) {
-                Button(
+            if (s is TrainingState.StartCountdown) {
+                AppActionButton(
+                    onClick = {
+                        isStopping = true
+                        onStop()
+                    },
+                    modifier = Modifier.fillMaxWidth(), tone = ActionTone.Secondary, size = ActionSize.Glove
+                ) { Text(strings.cancel, style = MaterialTheme.typography.headlineSmall) }
+            } else if (s is TrainingState.Paused) {
+                AppActionButton(
                     onClick = onResume,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    size = ActionSize.Glove
                 ) { Text(strings.resume, style = MaterialTheme.typography.headlineSmall) }
                 Spacer(modifier = Modifier.height(20.dp))
             } else if (s !is TrainingState.Finished && s !is TrainingState.Idle) {
-                OutlinedButton(
+                AppActionButton(
                     onClick = onPause,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    size = ActionSize.Glove
                 ) { Text(strings.pause, style = MaterialTheme.typography.headlineSmall) }
                 Spacer(modifier = Modifier.height(20.dp))
             }
             if (s is TrainingState.Finished) {
-                OutlinedButton(
+                AppActionButton(
                     onClick = onRestart,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 96.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    tone = ActionTone.Secondary,
+                    size = ActionSize.Glove
                 ) {
                     Text(strings.restartTraining, style = MaterialTheme.typography.headlineSmall)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
             }
-            Button(
+            if (s is TrainingState.Paused || s is TrainingState.Finished) AppActionButton(
                 onClick = {
                     isStopping = true
                     onStop()
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 96.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                modifier = Modifier.fillMaxWidth(),
+                tone = ActionTone.Destructive,
+                size = ActionSize.Glove
             ) {
                 val endLabel = if (s is TrainingState.Finished) strings.endTraining else strings.stop
                 Text(endLabel, style = MaterialTheme.typography.headlineSmall)
             }
         }
+    }
     }
 }
 
@@ -184,7 +201,7 @@ private fun TrainingStatusContent(state: TrainingState, preset: TrainingPreset) 
                         Text(strings.trainingOverview, style = MaterialTheme.typography.titleMedium)
                         Text("${strings.rounds}: ${preset.rounds}")
                         Text("${strings.callsRound}: ${preset.unitsPerRound}")
-                        Text("${strings.moves}: ${preset.totalUnits}")
+                        Text("${strings.totalCalls}: ${preset.totalUnits}")
                         Text("${strings.estimatedDuration}: ${formatDuration(preset.estimatedDurationSeconds())}")
                     }
                 }

@@ -5,6 +5,8 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 
+import androidx.compose.ui.semantics.*
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -70,7 +72,7 @@ import java.util.Locale
 
 private const val JONAS_VOICE_NAME = "de-de-x-deb-local"
 
-private fun voiceLabel(name: String, german: Boolean): String = when (name) {
+internal fun voiceLabel(name: String, german: Boolean): String = when (name) {
     JONAS_VOICE_NAME -> if (german) "Jonas · männlich" else "Jonas · male"
     else -> name
 }
@@ -86,7 +88,9 @@ fun SettingsScreen(
     uiLanguage: String,
     onUiLanguageChange: (String) -> Unit,
     onPresetChange: (TrainingPreset) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    legacyAudio: Boolean = false,
+    onUseLegacyAudio: () -> Unit = {}
 ) {
     val s = LocalStrings.current
     val context = LocalContext.current
@@ -121,7 +125,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = s.close,
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -139,9 +143,17 @@ fun SettingsScreen(
             Text(
                 text = s.audio,
                 style = MaterialTheme.typography.labelSmall,
-                color = HaulaufTextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            Text(if (legacyAudio) {
+                if (german) "Bisherige Lautstärken bleiben je Training erhalten. Eine Änderung hier setzt gemeinsame Pegel für alle Trainings." else "Existing per-training levels are preserved. Changing a slider sets shared levels for all trainings."
+            } else {
+                if (german) "Diese Lautstärken gelten für alle Trainings." else "These levels apply to all trainings."
+            }, style = MaterialTheme.typography.bodySmall)
+            if (!legacyAudio) TextButton(onClick = onUseLegacyAudio) {
+                Text(if (german) "Gespeicherte Trainingspegel verwenden" else "Use saved training levels")
+            }
             // Call volume
             SettingsAudioCard(
                 icon = Icons.Filled.Settings,
@@ -158,8 +170,7 @@ fun SettingsScreen(
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
                 onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
-                enabled = preset.endBeepEnabled,
-                onToggleEnabled = { onPresetChange(preset.copy(endBeepEnabled = it)) }
+                enabled = true
             )
 
             // Metronome global audio only (per-training behavior is configured in Advanced settings)
@@ -172,24 +183,24 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
-                color = HaulaufCard
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
                         if (german) "Ansagestimme" else "Announcement voice",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         if (german) "Wähle zwischen der bisherigen Standardstimme und Jonas. Importierte Aufnahmen behalten ihre eigene Stimme."
                         else "Choose the original system voice or Jonas. Imported recordings keep their own voice.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         ttsVoiceName?.let { voiceLabel(it, german) } ?: if (german) "Standardstimme" else "Default voice",
                         style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufGoldLight
+                        color = MaterialTheme.colorScheme.primary
                     )
                     TextButton(onClick = { voicePickerOpen = true }) {
                         Text(if (german) "Stimme auswählen / anhören" else "Choose / preview voice")
@@ -200,35 +211,36 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
-                color = HaulaufCard
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
                         text = s.ttsSpeed,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = s.ttsSpeedDesc,
                         style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Slider(
+                        modifier = Modifier.semantics { contentDescription = s.ttsSpeed; stateDescription = "%.2f".format(ttsSpeechRate) },
                         value = ttsSpeechRate.coerceIn(0.5f, 2f),
                         onValueChange = { onTtsSpeechRateChange(it) },
                         valueRange = 0.5f..2f,
                         steps = 14,
                         colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = HaulaufGoldLight,
-                            inactiveTrackColor = Color.DarkGray
+                            thumbColor = MaterialTheme.colorScheme.onSurface,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                         )
                     )
                     Text(
                         text = "%.2f".format(ttsSpeechRate),
                         style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -237,13 +249,13 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
-                color = HaulaufCard
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
                         text = s.language,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(
@@ -252,13 +264,13 @@ fun SettingsScreen(
                         TextButton(
                             onClick = { onUiLanguageChange("de") },
                             colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (uiLanguage == "de") HaulaufGoldLight else HaulaufTextSecondary
+                                contentColor = if (uiLanguage == "de") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) { Text(s.languageDe) }
                         TextButton(
                             onClick = { onUiLanguageChange("en") },
                             colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (uiLanguage == "en") HaulaufGoldLight else HaulaufTextSecondary
+                                contentColor = if (uiLanguage == "en") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) { Text(s.languageEn) }
                     }
@@ -273,7 +285,7 @@ fun SettingsScreen(
             onDismissRequest = { voicePickerOpen = false },
             title = { Text(if (german) "Deutsche Stimmen" else "German voices") },
             text = {
-                Column(Modifier.height(400.dp).verticalScroll(rememberScrollState())) {
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
                     Text(
                         if (german) "Jonas ist der App-Name der auf diesem Gerät geprüften männlichen Stimme. Hör die Probe vor der Auswahl an."
                         else "Jonas is the app name for the male voice tested on this device. Preview it before choosing.",
@@ -332,7 +344,7 @@ private fun SettingsMetronomeCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardDefaults.shape,
-        color = HaulaufCard
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -344,30 +356,31 @@ private fun SettingsMetronomeCard(
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = null,
-                        tint = HaulaufGoldLight,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = s.metronome,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+            Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Slider(
-                value = preset.volumeTick.coerceIn(0f, 1f),
+                modifier = Modifier.semantics { contentDescription = s.tickVolume; stateDescription = "${(preset.volumeTick * 100).toInt()}%" },
+                        value = preset.volumeTick.coerceIn(0f, 1f),
                 onValueChange = { onPresetChange(preset.copy(volumeTick = it.coerceIn(0f, 1f))) },
                 valueRange = 0f..1f,
                 colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = HaulaufGoldLight,
-                    inactiveTrackColor = Color.DarkGray
+                    thumbColor = MaterialTheme.colorScheme.onSurface,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                 )
             )
-            Text("${(preset.volumeTick * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+            Text("${(preset.volumeTick * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -385,7 +398,7 @@ private fun SettingsAudioCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardDefaults.shape,
-        color = HaulaufCard
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -397,23 +410,24 @@ private fun SettingsAudioCard(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = HaulaufGoldLight,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 if (onToggleEnabled != null) {
                     Switch(
+                        modifier = Modifier.semantics { contentDescription = title },
                         checked = enabled,
                         onCheckedChange = onToggleEnabled,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = HaulaufGoldLight
+                            checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
@@ -421,21 +435,22 @@ private fun SettingsAudioCard(
             Spacer(Modifier.height(12.dp))
             Column {
                 Slider(
-                    value = value.coerceIn(0f, 1f),
+                    modifier = Modifier.semantics { contentDescription = title; stateDescription = subtitle },
+                        value = value.coerceIn(0f, 1f),
                     onValueChange = { onValueChange(it.coerceIn(0f, 1f)) },
                     enabled = enabled,
                     valueRange = 0f..1f,
                     colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = HaulaufGoldLight,
-                        inactiveTrackColor = Color.DarkGray
+                        thumbColor = MaterialTheme.colorScheme.onSurface,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                     )
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

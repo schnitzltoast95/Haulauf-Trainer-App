@@ -1,5 +1,9 @@
 package com.example.myapplication.ui
 
+import androidx.compose.ui.semantics.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,15 +30,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
@@ -52,6 +55,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,7 +65,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
@@ -72,7 +76,6 @@ import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.ui.theme.HaulaufCard
 import com.example.myapplication.ui.theme.HaulaufCardBorder
 import com.example.myapplication.ui.theme.HaulaufGold
-import com.example.myapplication.ui.theme.HaulaufGoldDark
 import com.example.myapplication.ui.theme.HaulaufGoldLight
 import com.example.myapplication.ui.theme.HaulaufTextSecondary
 import androidx.compose.foundation.layout.width
@@ -94,20 +97,26 @@ fun TrainingSetupScreen(
     onPresetChange: (TrainingPreset) -> Unit,
     onStart: () -> Unit,
     onSavePreset: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    savedName: String? = null,
+    onSaveCopy: ((String) -> Unit)? = null,
+    onBrowseExercises: (() -> Unit)? = null
 ) {
     val s = LocalStrings.current
     var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
-    var presetName by remember { mutableStateOf("") }
-    var selectedCategoryTab by remember { mutableStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
-    var rounds by remember(preset.rounds) { mutableStateOf(preset.rounds) }
-    var unitsPerRound by remember(preset.unitsPerRound) { mutableStateOf(preset.unitsPerRound) }
+    var presetName by remember { mutableStateOf(savedName.orEmpty()) }
+    var saveCopy by remember { mutableStateOf(false) }
+    var showPriorities by remember { mutableStateOf(false) }
+    val de = s === StringsDe
+    var selectedCategoryTab by remember { mutableIntStateOf(0) } // 0 = Alle, 1 = Haue, 2 = Huten, 3 = Stiche
+    var rounds by remember(preset.rounds) { mutableIntStateOf(preset.rounds) }
+    var unitsPerRound by remember(preset.unitsPerRound) { mutableIntStateOf(preset.unitsPerRound) }
     var fixedInterval by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMinMs == null) }
-    var intervalSec by remember(preset.reactionIntervalMs) { mutableStateOf(preset.reactionIntervalMs / 1000f) }
-    var intervalMinSec by remember(preset.reactionIntervalMinMs ?: 5f) { mutableStateOf((preset.reactionIntervalMinMs ?: 5000) / 1000f) }
-    var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
-    var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableStateOf(preset.pauseBetweenRoundsMs / 1000f) }
+    var intervalSec by remember(preset.reactionIntervalMs) { mutableFloatStateOf(preset.reactionIntervalMs / 1000f) }
+    var intervalMinSec by remember(preset.reactionIntervalMinMs ?: 5f) { mutableFloatStateOf((preset.reactionIntervalMinMs ?: 5000) / 1000f) }
+    var intervalMaxSec by remember(preset.reactionIntervalMaxMs ?: 7f) { mutableFloatStateOf((preset.reactionIntervalMaxMs ?: 7000) / 1000f) }
+    var pauseSec by remember(preset.pauseBetweenRoundsMs) { mutableFloatStateOf(preset.pauseBetweenRoundsMs / 1000f) }
     var selectedIds by remember(preset.selectedMoveIds) { mutableStateOf(preset.selectedMoveIds) }
     var movePriorities by remember(preset.movePriorities) {
         mutableStateOf(
@@ -115,13 +124,14 @@ fun TrainingSetupScreen(
         )
     }
     var showAdvanced by remember { mutableStateOf(false) }
+    var showSelection by remember { mutableStateOf(false) }
     var endBeep by remember(preset.endBeepEnabled) { mutableStateOf(preset.endBeepEnabled) }
     var metronome by remember(preset.metronomeEnabled) { mutableStateOf(preset.metronomeEnabled) }
     var metronomeBeats by remember(preset.metronomeBeatIntervalMs) {
-        mutableStateOf(preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt())
+        mutableIntStateOf(preset.metronomeBeatIntervalMs.coerceIn(1L, 32L).toInt())
     }
     var noRep by remember(preset.noImmediateRepetition) { mutableStateOf(preset.noImmediateRepetition) }
-    var initialCountdownSec by remember(preset.initialCountdownMs) { mutableStateOf((preset.initialCountdownMs / 1000).toInt()) }
+    var initialCountdownSec by remember(preset.initialCountdownMs) { mutableIntStateOf((preset.initialCountdownMs / 1000).toInt()) }
     val availableMoveIds = remember(allMoves) { allMoves.map { it.id }.toSet() }
     val selectedValidIds = selectedIds.intersect(availableMoveIds)
 
@@ -173,7 +183,12 @@ fun TrainingSetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(s.configureTrainingTitle) },
+                title = { Text(savedName ?: s.configureTrainingTitle, maxLines = 1) },
+                actions = {
+                    if (savedName != null) TextButton(onClick = { saveCopy = true; presetName = "$savedName (${if (de) "Kopie" else "copy"})"; showSavePresetDialog = true }) {
+                        Text(if (de) "Kopie" else "Copy")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
@@ -183,66 +198,38 @@ fun TrainingSetupScreen(
         },
         bottomBar = {
             Surface(
-                color = HaulaufCard,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 tonalElevation = 0.dp,
                 shadowElevation = 8.dp
             ) {
-                Row(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    Button(
+                    val actionWidth = if (LocalDensity.current.fontScale > 1.3f || maxWidth < 280.dp) maxWidth else (maxWidth - 12.dp) / 2
+                    WrappingControls {
+                    AppLaunchButton(
                         onClick = onStart,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        shape = MaterialTheme.shapes.large,
-                        contentPadding = PaddingValues(0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 8.dp,
-                            pressedElevation = 4.dp
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(HaulaufGoldLight, HaulaufGoldDark)
-                                    ),
-                                    shape = MaterialTheme.shapes.large
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = s.startTraining,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = Color.White
-                            )
-                        }
-                    }
+                        enabled = selectedValidIds.isNotEmpty(),
+                        modifier = Modifier.width(actionWidth),
+                        label = if (savedName != null) { if (de) "Nur diesmal starten" else "Start this time" } else s.startTraining
+                    )
 
-                    OutlinedButton(
-                        onClick = { showSavePresetDialog = true },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        )
+                    AppActionButton(
+                        onClick = { saveCopy = false; showSavePresetDialog = true },
+                        modifier = Modifier.width(actionWidth),
+                        tone = ActionTone.Secondary,
+                        size = ActionSize.Prominent
                     ) {
                         Text(
-                            text = s.savePreset,
-                            style = MaterialTheme.typography.titleMedium
+                            text = if (savedName != null) s.save else s.savePreset,
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
                         )
                     }
+                }
                 }
             }
         }
@@ -255,52 +242,291 @@ fun TrainingSetupScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Estimated duration card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                color = HaulaufGoldDark.copy(alpha = 0.25f),
-                tonalElevation = 0.dp
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = (if (de) "Dauer ca. " else "About ") + "${durationMinutes}m ${durationSeconds}s",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds) +
+                        (if (de) " · Start in ${initialCountdownSec}s" else " · Starts in ${initialCountdownSec}s"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AppActionButton(tone = ActionTone.Secondary, 
+                onClick = { if (onBrowseExercises != null) onBrowseExercises() else showSelection = !showSelection },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(MaterialTheme.shapes.small)
-                                    .background(HaulaufGoldLight.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
+                Text(
+                    text = if (showSelection && onBrowseExercises == null) {
+                        if (de) "Auswahl schließen (${selectedValidIds.size})" else "Close selection (${selectedValidIds.size})"
+                    } else {
+                        if (de) "Übungen auswählen (${selectedValidIds.size})" else "Choose exercises (${selectedValidIds.size})"
+                    },
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (selectedValidIds.isEmpty()) Text(
+                if (de) "Wähle mindestens eine Übung zum Starten." else "Select at least one exercise to start.",
+                color = MaterialTheme.colorScheme.error
+            ) else if (!showSelection) Text(
+                text = allMoves.filter { it.id in selectedValidIds }.joinToString(", ") { it.displayName },
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (onBrowseExercises != null) TextButton(onClick = { showSelection = !showSelection; showPriorities = true }) {
+                Text(if (showSelection) { if (de) "Gewichtung schließen" else "Hide weighting" } else { if (de) "Gewichtung anpassen" else "Adjust weighting" })
+            }
+            if (showSelection) {
+                // Select moves
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CardDefaults.shape,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        // Filter moves based on selected tab
+                        val movesByCategory = allMoves.groupBy { it.category }
+                        val hauMoves = movesByCategory[MoveCategory.HAU] ?: emptyList()
+                        val hutMoves = movesByCategory[MoveCategory.HUT] ?: emptyList()
+                        val stichMoves = movesByCategory[MoveCategory.STICH] ?: emptyList()
+                        val movesToShow = when (selectedCategoryTab) {
+                            1 -> hauMoves
+                            2 -> hutMoves
+                            3 -> stichMoves
+                            else -> allMoves
+                        }
+                        val visibleMoveIds = movesToShow.map { it.id }.toSet()
+                        val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedValidIds }
+                        val selectedHauCount = hauMoves.count { it.id in selectedValidIds }
+                        val selectedHutCount = hutMoves.count { it.id in selectedValidIds }
+                        val selectedStichCount = stichMoves.count { it.id in selectedValidIds }
+                        val totalAllCount = allMoves.size
+                        val totalHauCount = hauMoves.size
+                        val totalHutCount = hutMoves.size
+                        val totalStichCount = stichMoves.size
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = s.selectMoves,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            TextButton(
+                                onClick = {
+                                    if (allVisibleSelected) {
+                                        selectedIds = selectedValidIds - visibleMoveIds
+                                        movePriorities = movePriorities - visibleMoveIds
+                                    } else {
+                                        val missingIds = visibleMoveIds - selectedValidIds
+                                        selectedIds = selectedValidIds + visibleMoveIds
+                                        movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
+                                    }
+                                },
+                                enabled = movesToShow.isNotEmpty(),
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
                             ) {
                                 Text(
-                                    text = "⏱",
-                                    fontSize = 12.sp
+                                    text = if (allVisibleSelected) s.selectNone else s.selectAll,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            Spacer(Modifier.size(8.dp))
-                            Text(
-                                text = s.estimatedDuration,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
-                            )
                         }
+                        Spacer(Modifier.height(12.dp))
+
+                        TextButton(onClick = { showPriorities = !showPriorities }) {
+                            Text(if (showPriorities) { if (de) "Gewichtung schließen" else "Hide weighting" } else { if (de) "Gewichtung anpassen" else "Adjust weighting" })
+                        }
+                        // Tabs for categories
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        ) {
+                            TabRow(
+                                selectedTabIndex = selectedCategoryTab,
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                divider = {},
+                                indicator = { tabPositions ->
+                                    TabRowDefaults.SecondaryIndicator(
+                                        modifier = Modifier
+                                            .tabIndicatorOffset(tabPositions[selectedCategoryTab])
+                                            .padding(horizontal = 14.dp),
+                                        height = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            ) {
+                                Tab(
+                                    selected = selectedCategoryTab == 0,
+                                    onClick = { selectedCategoryTab = 0 },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
+                                            fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 1,
+                                    onClick = { selectedCategoryTab = 1 },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            "${s.haue}\n($selectedHauCount/$totalHauCount)",
+                                            fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 2,
+                                    onClick = { selectedCategoryTab = 2 },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            "${s.huten}\n($selectedHutCount/$totalHutCount)",
+                                            fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                Tab(
+                                    selected = selectedCategoryTab == 3,
+                                    onClick = { selectedCategoryTab = 3 },
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = {
+                                        Text(
+                                            "${s.stiche}\n($selectedStichCount/$totalStichCount)",
+                                            fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+
+                        movesToShow.forEach { move ->
+                                    val selected = move.id in selectedValidIds
+                                    val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
+                                    val increasePriority: () -> Unit = {
+                                        if (!selected) {
+                                            selectedIds = selectedValidIds + move.id
+                                            movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
+                                        } else {
+                                            val newPriority = nextMovePriority(priority)
+                                            movePriorities = movePriorities + (move.id to newPriority)
+                                        }
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                            .combinedClickable(
+                                                onClick = {
+                                                if (selected) {
+                                                    selectedIds = selectedValidIds - move.id
+                                                    movePriorities = movePriorities - move.id
+                                                } else {
+                                                    selectedIds = selectedValidIds + move.id
+                                                    movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
+                                                }
+                                            },
+                                                onDoubleClick = if (showPriorities) increasePriority else null,
+                                                onLongClick = if (showPriorities) increasePriority else null
+                                            ),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.02f)
+                                    ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = move.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.95f),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (selected) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (showPriorities) TextButton(onClick = increasePriority) {
+                                                    Text("${priority}×")
+                                                }
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = { showMoveInfoDialog = move },
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Info,
+                                                contentDescription = s.moveInfo,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .border(
+                                                    width = 1.dp,
+                                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    shape = RectangleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (selected) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "${durationMinutes}m ${durationSeconds}s",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = HaulaufGoldLight,
-                            fontWeight = FontWeight.Bold
+                            text = s.selectionSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = s.totalCallsAcrossRoundsFormat.format(rounds * unitsPerRound, rounds),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
-                    )
                 }
             }
 
@@ -322,34 +548,31 @@ fun TrainingSetupScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
-                color = HaulaufCard
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    WrappingControls {
                         Text(
                             text = s.reactionInterval,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = s.random,
+                                    text = s.random,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(8.dp))
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.random },
                                 checked = !fixedInterval,
                                 onCheckedChange = { checked -> fixedInterval = !checked },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = Color.DarkGray
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                         }
@@ -360,7 +583,7 @@ fun TrainingSetupScreen(
                         Text(
                             text = s.secondsRange,
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Row(
@@ -374,25 +597,27 @@ fun TrainingSetupScreen(
                                 },
                                 valueRange = 0.05f..5f,
                                 steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).semantics { contentDescription = s.reactionInterval; stateDescription = "%.2f ${s.seconds}".format(intervalSec) },
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = HaulaufGoldLight,
-                                    inactiveTrackColor = Color.DarkGray
+                                    thumbColor = MaterialTheme.colorScheme.onSurface,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                             Text(
                                 text = "%.2fs".format(intervalSec),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = HaulaufGoldLight,
-                                modifier = Modifier.width(48.dp)
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.widthIn(min = 48.dp)
                             )
                         }
                     } else {
                         Text(
                             text = s.minMaxSecondsRange,
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Row(
@@ -401,6 +626,7 @@ fun TrainingSetupScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Slider(
+                                    modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Minimum"; stateDescription = "%.2f ${s.seconds}".format(intervalMinSec) },
                                     value = intervalMinSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->
                                         val n = (v * 20).toInt() / 20f
@@ -410,15 +636,16 @@ fun TrainingSetupScreen(
                                     valueRange = 0.05f..5f,
                                     steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = HaulaufGoldLight,
-                                        inactiveTrackColor = Color.DarkGray
+                                        thumbColor = MaterialTheme.colorScheme.onSurface,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 )
-                                Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                                Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Slider(
+                                    modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Maximum"; stateDescription = "%.2f ${s.seconds}".format(intervalMaxSec) },
                                     value = intervalMaxSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->
                                         intervalMaxSec = ((v * 20).toInt() / 20f).coerceAtLeast(intervalMinSec)
@@ -426,12 +653,12 @@ fun TrainingSetupScreen(
                                     valueRange = 0.05f..5f,
                                     steps = ((5f - 0.05f) / 0.05f).toInt() - 1,
                                     colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = HaulaufGoldLight,
-                                        inactiveTrackColor = Color.DarkGray
+                                        thumbColor = MaterialTheme.colorScheme.onSurface,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 )
-                                Text("%.2fs".format(intervalMaxSec), style = MaterialTheme.typography.bodySmall, color = HaulaufTextSecondary)
+                                Text("%.2fs".format(intervalMaxSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -439,268 +666,14 @@ fun TrainingSetupScreen(
             }
 
             // Pause between rounds
-            StepperCard(
+            if (rounds > 1) StepperCard(
                 title = s.pauseBetweenRounds,
                 value = pauseSec.toInt(),
                 onChange = { v -> pauseSec = v.coerceAtLeast(0).toFloat() }
             )
 
-            // Select moves
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = CardDefaults.shape,
-                color = HaulaufCard
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    // Filter moves based on selected tab
-                    val movesByCategory = allMoves.groupBy { it.category }
-                    val hauMoves = movesByCategory[MoveCategory.HAU] ?: emptyList()
-                    val hutMoves = movesByCategory[MoveCategory.HUT] ?: emptyList()
-                    val stichMoves = movesByCategory[MoveCategory.STICH] ?: emptyList()
-                    val movesToShow = when (selectedCategoryTab) {
-                        1 -> hauMoves
-                        2 -> hutMoves
-                        3 -> stichMoves
-                        else -> allMoves
-                    }
-                    val visibleMoveIds = movesToShow.map { it.id }.toSet()
-                    val allVisibleSelected = movesToShow.isNotEmpty() && movesToShow.all { it.id in selectedValidIds }
-                    val selectedHauCount = hauMoves.count { it.id in selectedValidIds }
-                    val selectedHutCount = hutMoves.count { it.id in selectedValidIds }
-                    val selectedStichCount = stichMoves.count { it.id in selectedValidIds }
-                    val totalAllCount = allMoves.size
-                    val totalHauCount = hauMoves.size
-                    val totalHutCount = hutMoves.size
-                    val totalStichCount = stichMoves.size
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = s.selectMoves,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        TextButton(
-                            onClick = {
-                                if (allVisibleSelected) {
-                                    selectedIds = selectedValidIds - visibleMoveIds
-                                    movePriorities = movePriorities - visibleMoveIds
-                                } else {
-                                    val missingIds = visibleMoveIds - selectedValidIds
-                                    selectedIds = selectedValidIds + visibleMoveIds
-                                    movePriorities = movePriorities + missingIds.associateWith { MIN_MOVE_PRIORITY }
-                                }
-                            },
-                            enabled = movesToShow.isNotEmpty(),
-                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                text = if (allVisibleSelected) s.selectNone else s.selectAll,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = HaulaufGoldLight
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    
-                    // Tabs for categories
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = Color.White.copy(alpha = 0.03f),
-                        border = BorderStroke(1.dp, HaulaufCardBorder)
-                    ) {
-                        TabRow(
-                            selectedTabIndex = selectedCategoryTab,
-                            containerColor = Color.Transparent,
-                            contentColor = HaulaufGoldLight,
-                            divider = {},
-                            indicator = { tabPositions ->
-                                TabRowDefaults.SecondaryIndicator(
-                                    modifier = Modifier
-                                        .tabIndicatorOffset(tabPositions[selectedCategoryTab])
-                                        .padding(horizontal = 14.dp),
-                                    height = 2.dp,
-                                    color = HaulaufGoldLight
-                                )
-                            }
-                        ) {
-                            Tab(
-                                selected = selectedCategoryTab == 0,
-                                onClick = { selectedCategoryTab = 0 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.all}\n(${selectedValidIds.size}/$totalAllCount)",
-                                        fontWeight = if (selectedCategoryTab == 0) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 1,
-                                onClick = { selectedCategoryTab = 1 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.haue}\n($selectedHauCount/$totalHauCount)",
-                                        fontWeight = if (selectedCategoryTab == 1) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 2,
-                                onClick = { selectedCategoryTab = 2 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.huten}\n($selectedHutCount/$totalHutCount)",
-                                        fontWeight = if (selectedCategoryTab == 2) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                            Tab(
-                                selected = selectedCategoryTab == 3,
-                                onClick = { selectedCategoryTab = 3 },
-                                selectedContentColor = HaulaufGoldLight,
-                                unselectedContentColor = HaulaufTextSecondary,
-                                text = {
-                                    Text(
-                                        "${s.stiche}\n($selectedStichCount/$totalStichCount)",
-                                        fontWeight = if (selectedCategoryTab == 3) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    
-                    movesToShow.forEach { move ->
-                                val selected = move.id in selectedValidIds
-                                val priority = normalizeMovePriority(movePriorities[move.id] ?: MIN_MOVE_PRIORITY)
-                                val increasePriority: () -> Unit = {
-                                    if (!selected) {
-                                        selectedIds = selectedValidIds + move.id
-                                        movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
-                                    } else {
-                                        val newPriority = nextMovePriority(priority)
-                                        movePriorities = movePriorities + (move.id to newPriority)
-                                    }
-                                }
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .combinedClickable(
-                                            onClick = {
-                                            if (selected) {
-                                                selectedIds = selectedValidIds - move.id
-                                                movePriorities = movePriorities - move.id
-                                            } else {
-                                                selectedIds = selectedValidIds + move.id
-                                                movePriorities = movePriorities + (move.id to MIN_MOVE_PRIORITY)
-                                            }
-                                        },
-                                            onDoubleClick = increasePriority,
-                                            onLongClick = increasePriority
-                                        ),
-                                    color = Color.White.copy(alpha = 0.02f)
-                                ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = move.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.95f),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (selected) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            if (priority > MIN_MOVE_PRIORITY) {
-                                                Text(
-                                                    text = if (priority == 2) s.priorityHigh else s.priorityHighest,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = HaulaufTextSecondary
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = increasePriority,
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                PriorityHeartIcon(
-                                                    priority = priority,
-                                                    contentDescription = s.priority,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = { showMoveInfoDialog = move },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Info,
-                                            contentDescription = s.moveInfo,
-                                            tint = HaulaufTextSecondary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (selected) HaulaufGoldLight else HaulaufTextSecondary.copy(alpha = 0.5f),
-                                                shape = RectangleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (selected) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Check,
-                                                contentDescription = null,
-                                                tint = HaulaufGoldLight,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = s.selectionSummary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "${s.haue}: $selectedHauCount/$totalHauCount · ${s.huten}: $selectedHutCount/$totalHutCount · ${s.stiche}: $selectedStichCount/$totalStichCount",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HaulaufTextSecondary
-                    )
-                    
-                }
+            AppActionButton(onClick = { showAdvanced = !showAdvanced }, modifier = Modifier.fillMaxWidth(), tone = ActionTone.Secondary) {
+                Text(if (showAdvanced) { if (de) "Erweitert schließen" else "Hide advanced" } else s.advancedSettings)
             }
 
             // Advanced settings kept minimal / collapsed toggle (optional)
@@ -708,46 +681,48 @@ fun TrainingSetupScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = CardDefaults.shape,
-                    color = HaulaufCard
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
                             text = s.advancedSettings,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.noImmediateRep },
                                 checked = noRep,
                                 onCheckedChange = { noRep = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.noImmediateRep,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.metronome },
                                 checked = metronome,
                                 onCheckedChange = { metronome = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.metronome,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         if (metronome) {
@@ -755,16 +730,17 @@ fun TrainingSetupScreen(
                             Text(
                                 text = s.beatInterval,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = s.beatIntervalHint,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(4.dp))
                             StepperInline(
+                                label = s.beatInterval,
                                 value = metronomeBeats,
                                 onChange = { v -> metronomeBeats = v.coerceIn(1, 32) }
                             )
@@ -772,44 +748,40 @@ fun TrainingSetupScreen(
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = s.endBeep },
                                 checked = endBeep,
                                 onCheckedChange = { endBeep = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = HaulaufGoldLight
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSurface,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = s.endBeep,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HaulaufTextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "${s.countdown} (${s.seconds}, 1-30)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = HaulaufTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         StepperInline(
+                            label = s.countdown,
                             value = initialCountdownSec.coerceIn(1, 30),
                             onChange = { v -> initialCountdownSec = v.coerceIn(1, 30) }
                         )
                     }
                 }
-            } else {
-                Text(
-                    text = s.advancedSettings,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .clickable { showAdvanced = true }
-                        .padding(top = 4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HaulaufTextSecondary
-                )
             }
+
+
+
+
 
         }
     }
@@ -836,7 +808,7 @@ fun TrainingSetupScreen(
                 TextButton(
                     onClick = {
                         if (presetName.isNotBlank()) {
-                            onSavePreset(presetName.trim())
+                            if (saveCopy && onSaveCopy != null) onSaveCopy(presetName.trim()) else onSavePreset(presetName.trim())
                             presetName = ""
                             showSavePresetDialog = false
                         }
@@ -863,54 +835,6 @@ fun TrainingSetupScreen(
             move = move,
             onDismiss = { showMoveInfoDialog = null }
         )
-    }
-}
-
-@Composable
-private fun PriorityHeartIcon(
-    priority: Int,
-    contentDescription: String,
-    modifier: Modifier = Modifier
-) {
-    when (priority) {
-        1 -> {
-            Icon(
-                imageVector = Icons.Filled.FavoriteBorder,
-                contentDescription = contentDescription,
-                tint = HaulaufTextSecondary,
-                modifier = modifier
-            )
-        }
-        2 -> {
-            Box(modifier = modifier) {
-                Icon(
-                    imageVector = Icons.Filled.FavoriteBorder,
-                    contentDescription = contentDescription,
-                    tint = HaulaufGold,
-                    modifier = Modifier.matchParentSize()
-                )
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = null,
-                    tint = HaulaufGold,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .drawWithContent {
-                            clipRect(right = size.width / 2f) {
-                                this@drawWithContent.drawContent()
-                            }
-                        }
-                )
-            }
-        }
-        else -> {
-            Icon(
-                imageVector = Icons.Filled.Favorite,
-                contentDescription = contentDescription,
-                tint = HaulaufGold,
-                modifier = modifier
-            )
-        }
     }
 }
 

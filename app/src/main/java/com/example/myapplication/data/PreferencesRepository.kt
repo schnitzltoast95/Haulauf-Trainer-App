@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -26,9 +29,7 @@ class PreferencesRepository(private val context: Context) {
                 reactionIntervalMinMs = prefs[REACTION_MIN_MS],
                 reactionIntervalMaxMs = prefs[REACTION_MAX_MS],
                 pauseBetweenRoundsMs = prefs[PAUSE_MS] ?: 10000L,
-                selectedMoveIds = (prefs[SELECTED_MOVES] ?: emptySet()).ifEmpty {
-                    DEFAULT_MOVES.map { it.id }.toSet()
-                },
+                selectedMoveIds = prefs[SELECTED_MOVES] ?: DEFAULT_MOVES.map { it.id }.toSet(),
                 endBeepEnabled = prefs[END_BEEP_ENABLED] ?: true,
                 metronomeEnabled = prefs[METRONOME_ENABLED] ?: false,
                 metronomeBeatIntervalMs = normalizeMetronomeBeats(prefs[METRONOME_INTERVAL_MS]),
@@ -58,7 +59,7 @@ class PreferencesRepository(private val context: Context) {
                 parts.size >= 3 -> {
                     val cat = try { MoveCategory.valueOf(parts[2]) } catch (_: Exception) { MoveCategory.HAU }
                     val info = moveInfoMap[parts[0]]
-                    Move(parts[0], parts[1], cat, info?.first, info?.second)
+                    Move(parts[0], if (parts[1].startsWith("v2:")) android.net.Uri.decode(parts[1].removePrefix("v2:")) else parts[1], cat, info?.first, info?.second)
                 }
                 parts.size == 2 -> {
                     val info = moveInfoMap[parts[0]]
@@ -126,17 +127,135 @@ class PreferencesRepository(private val context: Context) {
         val move = Move(id, displayName.trim(), category)
         context.dataStore.edit { prefs ->
             val current = prefs[CUSTOM_MOVES_KEY]?.toMutableSet() ?: mutableSetOf()
-            current.add("${move.id}|${move.displayName}|${move.category.name}")
+            current.add("${move.id}|v2:${android.net.Uri.encode(move.displayName)}|${move.category.name}")
             prefs[CUSTOM_MOVES_KEY] = current
         }
         return move
     }
 
     suspend fun removeCustomMove(moveId: String) {
+        require(moveId.startsWith("custom_"))
+        val obsolete = mutableSetOf<String>()
         context.dataStore.edit { prefs ->
-            val current = prefs[CUSTOM_MOVES_KEY]?.toMutableSet() ?: mutableSetOf()
-            current.removeAll { it.startsWith("$moveId|") }
-            prefs[CUSTOM_MOVES_KEY] = current
+            obsolete.addAll(ownedAttachmentPaths(JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}").optJSONObject(moveId)))
+            obsolete.addAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty().filter { it.startsWith("$moveId|") }))
+            for (key in listOf(CUSTOM_MOVES_KEY, MOVE_INFO_KEY, STRING_SET_KEY)) {
+                prefs[key] = prefs[key].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
+            }
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            details.remove(moveId)
+            prefs[MOVE_DETAILS_JSON] = details.toString()
+            excludeReferencedPaths(obsolete, details)
+            obsolete.removeAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty()).toSet())
+            prefs[SELECTED_MOVES]?.let { prefs[SELECTED_MOVES] = it - moveId }
+            prefs[MOVE_PRIORITIES] = prefs[MOVE_PRIORITIES].orEmpty().filterNot { it.startsWith("$moveId|") }.toSet()
+            val templates = JSONArray(prefs[SAVED_PRESETS_KEY] ?: "[]")
+            for (i in 0 until templates.length()) {
+                val template = templates.getJSONObject(i).getJSONObject("preset")
+                val ids = template.getJSONArray("selectedMoveIds")
+                template.put("selectedMoveIds", JSONArray((0 until ids.length()).map { ids.getString(it) }.filterNot { it == moveId }))
+                template.optJSONObject("movePriorities")?.remove(moveId)
+            }
+            prefs[SAVED_PRESETS_KEY] = templates.toString()
+        }
+        deleteOwnedAttachments(obsolete)
+    }
+
+    /** One transaction: readers never observe half-saved exercise details. */
+    suspend fun saveExercise(move: Move, audioUri: String?, section: ExerciseSection? = null) {
+        require(move.displayName.isNotBlank())
+        val obsolete = mutableSetOf<String>()
+        context.dataStore.edit { prefs ->
+            if (move.id.startsWith("custom_") && (section == null || section == ExerciseSection.DATA)) {
+                val custom = prefs[CUSTOM_MOVES_KEY].orEmpty().filterNot { it.startsWith("${move.id}|") }.toMutableSet()
+                custom.add("${move.id}|v2:${android.net.Uri.encode(move.displayName)}|${move.category.name}")
+                prefs[CUSTOM_MOVES_KEY] = custom
+            }
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            obsolete.addAll(ownedAttachmentPaths(details.optJSONObject(move.id)))
+            obsolete.addAll(ownedAudioPaths(prefs[STRING_SET_KEY].orEmpty().filter { it.startsWith("${move.id}|") }))
+            // Patch only the edited section inside this transaction. Other sections may
+            // have changed since the draft was opened (e.g. a slow repository emission).
+            val previous = details.optJSONObject(move.id)
+            details.put(move.id, JSONObject().apply {
+                put("description", if (section == null || section == ExerciseSection.DATA || previous?.has("description") != true)
+                    (DEFAULT_MOVES.find { it.id == move.id } ?: move).description ?: JSONObject.NULL else previous.get("description"))
+                put("imagePath", if (section == null) move.imagePath ?: JSONObject.NULL else if (section == ExerciseSection.MEDIA) JSONObject.NULL else previous?.opt("imagePath") ?: move.imagePath ?: JSONObject.NULL)
+                put("notes", if (section == null || section == ExerciseSection.NOTES) move.notes else previous?.optString("notes", move.notes) ?: move.notes)
+                val attachments = JSONArray().apply {
+                    move.media.forEach { item -> put(JSONObject().put("path", item.path).put("kind", item.kind.name)) }
+                }
+                put("media", if (section == null || section == ExerciseSection.MEDIA) attachments else previous?.optJSONArray("media") ?: attachments)
+            })
+            prefs[MOVE_DETAILS_JSON] = details.toString()
+            excludeReferencedPaths(obsolete, details)
+            val audio = prefs[STRING_SET_KEY].orEmpty().toMutableSet()
+            if (section == null || section == ExerciseSection.AUDIO) {
+                audio.removeAll { it.startsWith("${move.id}|") }
+                audioUri?.let { audio.add("${move.id}|$it") }
+                prefs[STRING_SET_KEY] = audio
+            }
+            obsolete.removeAll(ownedAudioPaths(audio).toSet())
+        }
+        deleteOwnedAttachments(obsolete)
+    }
+
+    private fun ownedAudioPaths(entries: Collection<String>): List<String> = entries.mapNotNull { entry ->
+        val uri = android.net.Uri.parse(entry.substringAfter('|', ""))
+        if (uri.scheme == "file") uri.path else null
+    }
+
+    private fun ownedAttachmentPaths(item: JSONObject?): List<String> {
+        if (item == null) return emptyList()
+        val media = item.optJSONArray("media") ?: JSONArray()
+        return listOfNotNull(item.optString("imagePath", "").takeIf { it.isNotBlank() }) +
+            (0 until media.length()).mapNotNull { media.optJSONObject(it)?.optString("path") }
+    }
+
+    private fun excludeReferencedPaths(obsolete: MutableSet<String>, details: JSONObject) {
+        details.keys().forEach { id -> obsolete.removeAll(ownedAttachmentPaths(details.optJSONObject(id)).toSet()) }
+    }
+
+    private suspend fun deleteOwnedAttachments(paths: Set<String>) = withContext(Dispatchers.IO) {
+        val directory = File(context.filesDir, "exercise-media").canonicalFile
+        paths.forEach { path ->
+            // Never remove external legacy documents or files outside the app's media directory.
+            runCatching { File(path).canonicalFile.takeIf { it.parentFile == directory }?.delete() }
+        }
+    }
+
+    val exerciseAdditions: Flow<Map<String, ExerciseAdditions>> = context.dataStore.data.map { prefs ->
+        val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+        buildMap {
+            details.keys().forEach { id ->
+                val item = details.getJSONObject(id)
+                // Missing means legacy data: retain its old description and image through migration.
+                if (item.has("notes")) {
+                    val media = item.optJSONArray("media") ?: JSONArray()
+                    put(id, ExerciseAdditions(item.optString("notes", ""), (0 until media.length()).mapNotNull { index ->
+                        val attachment = media.optJSONObject(index) ?: return@mapNotNull null
+                        val path = attachment.optString("path", "")
+                        val kind = runCatching { ExerciseMediaKind.valueOf(attachment.optString("kind", "IMAGE")) }.getOrNull()
+                        if (path.isBlank() || kind == null) null else ExerciseMedia(path, kind)
+                    }))
+                }
+            }
+        }
+    }
+
+    val globalAudio: Flow<AudioLevels?> = context.dataStore.data.map { prefs ->
+        prefs[GLOBAL_AUDIO]?.let { raw ->
+            val obj = JSONObject(raw)
+            AudioLevels(obj.getDouble("call").toFloat(), obj.getDouble("beep").toFloat(), obj.getDouble("tick").toFloat())
+        }
+    }
+
+    suspend fun saveGlobalAudio(levels: AudioLevels?) {
+        context.dataStore.edit { prefs ->
+            if (levels == null) prefs.remove(GLOBAL_AUDIO)
+            else prefs[GLOBAL_AUDIO] = JSONObject().apply {
+                put("call", levels.call.toDouble()); put("beep", levels.beep.toDouble()); put("tick", levels.tick.toDouble())
+            }.toString()
         }
     }
 
@@ -232,7 +351,14 @@ class PreferencesRepository(private val context: Context) {
                 val imagePath = if (parts.size >= 3 && parts[2].isNotEmpty()) parts[2] else null
                 parts[0] to (description to imagePath)
             } else null
-        }?.toMap() ?: emptyMap()
+        }?.toMap().orEmpty().toMutableMap().apply {
+            val details = JSONObject(prefs[MOVE_DETAILS_JSON] ?: "{}")
+            details.keys().forEach { id ->
+                val item = details.getJSONObject(id)
+                put(id, (if (item.isNull("description")) null else item.getString("description")) to
+                    (if (item.isNull("imagePath")) null else item.getString("imagePath")))
+            }
+        }
     }
 
     suspend fun savePreset(savedPreset: SavedPreset) {
@@ -287,6 +413,18 @@ class PreferencesRepository(private val context: Context) {
             }
             newArray.put(savedPresetJson)
             prefs[SAVED_PRESETS_KEY] = newArray.toString()
+        }
+    }
+
+    suspend fun renamePreset(presetId: String, name: String) {
+        require(name.isNotBlank())
+        context.dataStore.edit { prefs ->
+            val current = JSONArray(prefs[SAVED_PRESETS_KEY] ?: "[]")
+            val item = (0 until current.length()).map { current.getJSONObject(it) }
+                .firstOrNull { it.getString("id") == presetId }
+                ?: error("Training no longer exists")
+            item.put("name", name.trim())
+            prefs[SAVED_PRESETS_KEY] = current.toString()
         }
     }
 
@@ -348,6 +486,8 @@ class PreferencesRepository(private val context: Context) {
     }
 
     companion object {
+        private val MOVE_DETAILS_JSON = stringPreferencesKey("move_details_v2")
+        private val GLOBAL_AUDIO = stringPreferencesKey("global_audio_v1")
         private val ROUNDS = intPreferencesKey("rounds")
         private val UNITS_PER_ROUND = intPreferencesKey("units_per_round")
         private val REACTION_INTERVAL_MS = longPreferencesKey("reaction_interval_ms")
