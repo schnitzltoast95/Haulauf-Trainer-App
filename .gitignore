@@ -13,7 +13,15 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.jks
+*.keystore
+*.p12
 /.kotlin/
 
 # Local device screenshots and intermediate review logs.
 /.impeccable/review/
+
+# Local release credentials and artifacts.
+/release-signing/
+/release-artifacts/
+*.dpapi.txt

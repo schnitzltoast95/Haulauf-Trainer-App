@@ -32,10 +32,10 @@ Nachweise und Grenzen: [ANDROID_AUDIT.md](ANDROID_AUDIT.md).
 
 ## 3. Release vorbereiten
 
-- Lint-Bereinigung abgeschlossen: 0 Fehler, 0 Warnungen, 0 Hinweise. Diesen Stand bei weiteren Änderungen erhalten.
+- Lint für den aktuellen Release-Kandidaten erneut prüfen; frühere Nullbefunde gelten nicht automatisch für spätere Änderungen.
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) vollständig durchgehen, einschließlich
   Stimmenwahl und hörbarer Audioausgabe des tatsächlichen Release-Artefakts.
-- Versionsnummer erhöhen, Produktions-APK signieren und Installation beziehungsweise
+- Version 1.2.0 (versionCode 3) ist vorbereitet; Produktions-APK signieren und Installation beziehungsweise
   Update mit vorhandenen Nutzerdaten prüfen. Das Gesamt-APK verwendet wieder die reguläre App-Kennung und ist
   derzeit mit dem Debug-Schlüssel signiert. Isolierte Test-APKs ausschließlich
   für die Geräteprüfung verwenden; nicht als Gesamtversion ausliefern.
