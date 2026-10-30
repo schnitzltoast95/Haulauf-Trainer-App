@@ -17,6 +17,9 @@ fun TrainingEditor(
     onBack: () -> Unit
 ) {
     var draft by rememberSaveable { mutableStateOf(initial) }
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    var selection by rememberSaveable { mutableStateOf(ArrayList(initial.selectedMoveIds)) }
+    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmExit by remember { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf(saved?.name.orEmpty()) }
     var error by remember { mutableStateOf(false) }
@@ -39,6 +42,19 @@ fun TrainingEditor(
                 { if (attached && busy) { busy = false; error = true } })
         }
     }
+    if (choosing) {
+        val detail = allMoves.find { it.id == detailId }
+        BackHandler { if (detailId != null) detailId = null else choosing = false }
+        if (detail != null) ExerciseDetailScreen(detail, onEdit = null, onBack = { detailId = null })
+        else MoveAudioListScreen(allMoves, emptyMap(), onAddMove = { _, _ -> }, onTestMove = {},
+            onOpenMoveDetails = { detailId = it }, onBack = { choosing = false },
+            selectedIds = selection.toSet(), onToggle = { id -> selection = ArrayList(if (id in selection) selection - id else selection + id) },
+            onApplySelection = {
+                draft = draft.copy(selectedMoveIds = selection.toSet(), movePriorities = draft.movePriorities.filterKeys { it in selection })
+                choosing = false
+            })
+        return
+    }
     BackHandler(onBack = back)
     TrainingSetupScreen(
         preset = draft, allMoves = allMoves,
@@ -47,6 +63,7 @@ fun TrainingEditor(
         onSavePreset = { save(it, saved?.id) },
         onBack = back,
         savedName = saved?.name,
+        onBrowseExercises = { selection = ArrayList(draft.selectedMoveIds); choosing = true },
         onSaveCopy = { save(it, null) }
     )
     if (busy) AlertDialog(

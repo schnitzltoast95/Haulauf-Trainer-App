@@ -12,6 +12,8 @@ import com.example.myapplication.data.PreferencesRepository
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.data.Move
+import com.example.myapplication.data.ExerciseSection
+import com.example.myapplication.data.withPersonalContent
 import com.example.myapplication.service.TrainingForegroundService
 import com.example.myapplication.training.TrainingEngine
 import com.example.myapplication.training.TrainingState
@@ -54,22 +56,8 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         emptyMap()
     )
 
-    val allMoves = combine(prefs.customMoves, moveInfo) { custom, infoMap ->
-        val defaultWithInfo = DEFAULT_MOVES.map { move ->
-            val info = infoMap[move.id]
-            move.copy(
-                description = info?.first ?: move.description,
-                imagePath = if (info != null) info.second else move.imagePath
-            )
-        }
-        val customWithInfo = custom.map { move ->
-            val info = infoMap[move.id]
-            move.copy(
-                description = info?.first ?: move.description,
-                imagePath = if (info != null) info.second else move.imagePath
-            )
-        }
-        defaultWithInfo + customWithInfo
+    val allMoves = combine(prefs.customMoves, moveInfo, prefs.exerciseAdditions) { custom, infoMap, additions ->
+        (DEFAULT_MOVES + custom).map { it.withPersonalContent(infoMap[it.id], additions[it.id]) }
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -303,6 +291,15 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             catch (_: Exception) { onError() }
         }
     }
+
+    fun saveExerciseSection(section: ExerciseSection, move: Move, audioUri: String?, onSaved: () -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            try { prefs.saveExercise(move, audioUri, section); onSaved() }
+            catch (_: Exception) { onError() }
+        }
+    }
+
+    fun stopExercisePreview() { audioManager.stopAll() }
 
     fun previewExercise(move: Move, audioUri: String?) {
         viewModelScope.launch {

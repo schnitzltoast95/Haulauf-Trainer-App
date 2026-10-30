@@ -116,12 +116,13 @@ class LibraryFlowTest {
             capture("setup")
             compose.onNodeWithText("Übungen auswählen (19)").performClick()
             compose.onNodeWithText(StringsDe.selectNone).performScrollTo().performClick()
+            compose.onNodeWithText("0 Übungen übernehmen").performClick()
             compose.onNodeWithText("Nur diesmal starten").assertIsNotEnabled()
+            compose.onNodeWithText("Übungen auswählen (0)").performScrollTo().performClick()
             compose.onNodeWithText(StringsDe.selectAll).performScrollTo().performClick()
-            compose.onNodeWithText("Nur diesmal starten").assertIsEnabled()
-            compose.onNodeWithText("Auswahl schließen (19)").performScrollTo()
             capture("setup-selection")
-            compose.onNodeWithText("Auswahl schließen (19)").performClick()
+            compose.onNodeWithText("19 Übungen übernehmen").performClick()
+            compose.onNodeWithText("Nur diesmal starten").assertIsEnabled()
             compose.onNodeWithText(StringsDe.advancedSettings).performScrollTo().performClick()
             compose.onNodeWithText("5").performScrollTo()
             capture("setup-advanced")
@@ -178,11 +179,11 @@ class LibraryFlowTest {
             capture("home")
             compose.onAllNodesWithText(StringsDe.movesShort).onLast().performScrollTo().performClick()
             capture("exercise-library")
-            compose.onAllNodesWithText(StringsDe.addMove).onFirst().performScrollTo().performClick()
+            compose.onNodeWithContentDescription(StringsDe.addMove).performClick()
             compose.onNodeWithText(StringsDe.newMoveName).performTextInput("Neu angelegte Prüfhaltung")
             compose.onNodeWithText(StringsDe.hut).performClick()
             compose.onAllNodesWithText(StringsDe.addMove).onLast().performClick()
-            compose.waitUntil(5000) { compose.onAllNodesWithText("Eigene Übung").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(5000) { compose.onAllNodesWithText("Übungsdaten bearbeiten").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Neu angelegte Prüfhaltung").assertExists()
             compose.onNodeWithText(StringsDe.stich).performClick()
             compose.onNodeWithText(StringsDe.save).performClick()
@@ -286,7 +287,7 @@ class LibraryFlowTest {
         compose.onNodeWithText(StringsDe.delete).performClick()
         compose.onNodeWithText("Löschen fehlgeschlagen. Bitte erneut versuchen.").assertIsDisplayed()
         capture("editor-delete-error")
-        compose.runOnIdle { assertFalse(exited) }
+        compose.runOnIdle { assertTrue(exited); exited = false }
         compose.onNodeWithText(StringsDe.delete).performClick()
         compose.onNodeWithText("Wird gelöscht …").assertIsNotEnabled()
         compose.runOnIdle { assertEquals(2, deletes); assertEquals(2, saves); deleteSuccess!!() }
@@ -304,17 +305,14 @@ class LibraryFlowTest {
             androidx.test.espresso.intent.Intents.intending(androidx.test.espresso.intent.matcher.IntentMatchers.hasAction(android.content.Intent.ACTION_OPEN_DOCUMENT))
                 .respondWith(android.app.Instrumentation.ActivityResult(android.app.Activity.RESULT_OK, android.content.Intent().setData(android.net.Uri.fromFile(file))))
             compose.setContent { CompositionLocalProvider(LocalStrings provides StringsDe) { MyApplicationTheme(darkTheme = true) {
-                ExerciseEditor(exercise.id, listOf(exercise), null, emptyList(),
-                    onSave = { move, _, done, _ -> savedImage = move.imagePath; saved = true; done() },
+                ExerciseEditor(exercise.id, listOf(exercise), null, emptyList(), section = ExerciseSection.MEDIA,
+                    onSave = { move, _, done, _ -> savedImage = move.media.singleOrNull()?.path; saved = true; done() },
                     onPreview = { _, _ -> }, onDelete = { _, _, _ -> }, onBack = {})
             } } }
-            compose.onNodeWithText("Audio und Bild anpassen").performScrollTo().performClick()
-            compose.onNodeWithText(StringsDe.chooseImage).performScrollTo().performClick()
-            val error = "Datei nicht lesbar oder Format nicht unterstützt. Bitte eine andere Datei wählen."
+            compose.onNodeWithText("Bilder / Videos hinzufügen").performScrollTo().performClick()
+            val error = "Datei nicht lesbar, zu groß (max. 200 MB) oder Format nicht unterstützt. Bereits geladene Dateien bleiben im Entwurf."
             compose.waitUntil(5000) { compose.onAllNodesWithText(error).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(StringsDe.save).assertIsNotEnabled()
-            compose.onNodeWithText(StringsDe.chooseFile).performScrollTo().performClick()
-            compose.waitUntil(5000) { compose.onAllNodesWithText("Datei wird geprüft …").fetchSemanticsNodes().isEmpty() }
             compose.onNodeWithText(error).performScrollTo()
             capture("editor-import-error")
             compose.onNodeWithText(StringsDe.save).assertIsNotEnabled()
@@ -322,7 +320,7 @@ class LibraryFlowTest {
             bitmap.eraseColor(android.graphics.Color.YELLOW)
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
-            compose.onNodeWithText(StringsDe.chooseImage).performScrollTo().performClick()
+            compose.onNodeWithText("Bilder / Videos hinzufügen").performScrollTo().performClick()
             compose.waitUntil(5000) { compose.onAllNodesWithText("Ausgewählt – noch nicht gespeichert.").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(error).assertDoesNotExist()
             compose.onNodeWithText(StringsDe.save).performClick()

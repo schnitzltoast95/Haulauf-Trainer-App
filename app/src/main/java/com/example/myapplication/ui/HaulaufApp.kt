@@ -1,6 +1,8 @@
 package com.example.myapplication.ui
 
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.DisposableEffect
+import com.example.myapplication.data.ExerciseSection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -11,6 +13,9 @@ import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.AudioLevels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,6 +49,7 @@ fun HaulaufApp(
     }
 
     CompositionLocalProvider(LocalStrings provides strings) {
+    Box(Modifier.fillMaxSize()) {
     NavHost(
         navController = navController,
         startDestination = "home"
@@ -114,20 +120,37 @@ fun HaulaufApp(
             )
         }
         composable(
-            route = "move_audio/{moveId}",
-            arguments = listOf(navArgument("moveId") { type = NavType.StringType })
+            route = "move_audio/{moveId}?section={section}&add={add}",
+            arguments = listOf(navArgument("moveId") { type = NavType.StringType },
+                navArgument("section") { type = NavType.StringType; defaultValue = "DATA" },
+                navArgument("add") { type = NavType.BoolType; defaultValue = false })
         ) { backStackEntry ->
             val moveId = backStackEntry.arguments?.getString("moveId") ?: return@composable
+            val section = ExerciseSection.valueOf(backStackEntry.arguments?.getString("section") ?: "DATA")
+            DisposableEffect(Unit) { onDispose { viewModel.stopExercisePreview() } }
             ExerciseEditor(
                 moveId = moveId,
+                section = section,
+                addMediaOnOpen = backStackEntry.arguments?.getBoolean("add") == true,
+                standardVoiceLabel = ttsVoiceName?.let { voiceLabel(it, uiLanguage == "de") },
                 allMoves = allMoves,
                 overrideUri = moveOverrides[moveId],
                 savedPresets = savedPresets,
-                onSave = viewModel::saveExercise,
+                onSave = { move, audio, done, failed -> viewModel.saveExerciseSection(section, move, audio, done, failed) },
                 onPreview = viewModel::previewExercise,
                 onDelete = viewModel::removeCustomMove,
+                onDeleted = { navController.popBackStack("move_audio_list", inclusive = false) },
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable("move_details/{moveId}", arguments = listOf(navArgument("moveId") { type = NavType.StringType })) { entry ->
+            val move = allMoves.find { it.id == entry.arguments?.getString("moveId") }
+            DisposableEffect(Unit) { onDispose { viewModel.stopExercisePreview() } }
+            if (move != null) ExerciseDetailScreen(move,
+                onPreview = { viewModel.testMoveAudio(move.id) },
+                onEdit = { section -> navController.navigate("move_audio/${move.id}?section=${section.name}") },
+                onBack = { navController.popBackStack() })
         }
 
         composable("training") {
@@ -165,13 +188,28 @@ fun HaulaufApp(
                 allMoves = allMoves,
                 moveOverrides = moveOverrides,
                 onAddMove = { name, category ->
-                    viewModel.addCustomMove(name, category) { id -> navController.navigate("move_audio/$id") }
+                    viewModel.addCustomMove(name, category) { id ->
+                        navController.navigate("move_details/$id")
+                        navController.navigate("move_audio/$id?section=DATA")
+                    }
                 },
                 onTestMove = viewModel::testMoveAudio,
-                onOpenMoveDetails = { id -> navController.navigate("move_audio/$id") },
+                onOpenMoveDetails = { id -> navController.navigate("move_details/$id") },
                 onBack = { navController.popBackStack() }
             )
         }
+    }
+    BugReportOverlay(
+        context = {
+            val entry = navController.currentBackStackEntry
+            bugReportContext(
+                entry?.destination?.route ?: "home",
+                entry?.arguments?.getString("section"),
+                viewModel.trainingState.value
+            )
+        },
+        language = uiLanguage
+    )
     }
     }
 }

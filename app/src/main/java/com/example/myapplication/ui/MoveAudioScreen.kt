@@ -6,6 +6,11 @@ import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Environment
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -15,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -81,7 +87,10 @@ fun MoveAudioListScreen(
     onAddMove: (String, MoveCategory) -> Unit,
     onTestMove: (String) -> Unit,
     onOpenMoveDetails: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    selectedIds: Set<String>? = null,
+    onToggle: (String) -> Unit = {},
+    onApplySelection: (() -> Unit)? = null
 ) {
     val s = LocalStrings.current
     val scrollState = rememberLazyListState()
@@ -97,10 +106,19 @@ fun MoveAudioListScreen(
         allMoves.filter { (categoryFilter == null || it.category == categoryFilter) && it.displayName.contains(query, ignoreCase = true) }
     }
     Scaffold(
+        bottomBar = {
+            if (onApplySelection != null) Surface {
+                AppActionButton(onClick = onApplySelection, modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {
+                    val count = selectedIds.orEmpty().size
+                    Text(if (s === StringsDe) { if (count == 1) "1 Übung übernehmen" else "$count Übungen übernehmen" }
+                        else { if (count == 1) "Use 1 exercise" else "Use $count exercises" })
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(s.moveDetailsTitle) },
+                title = { Text(if (selectedIds != null) s.selectMoves else s.moveDetailsTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -111,7 +129,7 @@ fun MoveAudioListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showAddMoveDialog = true }) {
+                    if (selectedIds == null) IconButton(onClick = { showAddMoveDialog = true }) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = s.addMove,
@@ -132,13 +150,6 @@ fun MoveAudioListScreen(
         ) {
             item(key = "controls") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = s.customizeAudioDesc,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-
             OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
                 label = { Text(if (s === StringsDe) "Übung suchen" else "Search exercises") }, modifier = Modifier.fillMaxWidth())
             WrappingControls {
@@ -148,73 +159,36 @@ fun MoveAudioListScreen(
                     })
                 }
             }
-            AppActionButton(onClick = { showAddMoveDialog = true }, modifier = Modifier.fillMaxWidth()) { Text(s.addMove) }
+            if (selectedIds != null) {
+                val allVisibleSelected = visible.isNotEmpty() && visible.all { it.id in selectedIds }
+                TextButton(onClick = {
+                    visible.filter { (it.id in selectedIds) == allVisibleSelected }.forEach { onToggle(it.id) }
+                }, enabled = visible.isNotEmpty()) {
+                    Text(if (allVisibleSelected) s.selectNone else s.selectAll)
+                }
+            }
             }
             }
             if (visible.isEmpty()) item { Text(if (s === StringsDe) "Keine passenden Übungen." else "No matching exercises.") }
             items(visible, key = { it.id }) { move ->
-                val overrideUri = moveOverrides[move.id]
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CardDefaults.shape,
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenMoveDetails(move.id) },
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (selectedIds != null && move.id in selectedIds) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = move.displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = when {
-                                overrideUri != null -> s.customAudioEnabled
-                                else -> s.defaultAudioEnabled
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (!move.description.isNullOrBlank()) {
-                            Text(
-                                text = "${s.descriptionLabel}: ${move.description}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2
-                            )
+                    BoxWithConstraints {
+                    val compact = maxWidth < 320.dp || LocalDensity.current.fontScale > 1.3f
+                    Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val preview = move.historicalImageRes ?: move.media.firstOrNull { it.kind == com.example.myapplication.data.ExerciseMediaKind.IMAGE }?.path?.let { moveImageModel(LocalContext.current, it, null) }
+                        if (preview != null && !compact) AsyncImage(preview, null, contentScale = ContentScale.Fit, modifier = Modifier.size(64.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(move.displayName, style = MaterialTheme.typography.titleMedium)
+                            Text(categoryLabel(move.category), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (preview != null && compact) AsyncImage(preview, null, contentScale = ContentScale.Fit, modifier = Modifier.size(64.dp))
                         }
-                        BoxWithConstraints(Modifier.fillMaxWidth()) {
-                            val actionWidth = if (maxWidth < 300.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
-                                maxWidth else (maxWidth - 8.dp) / 2
-                            WrappingControls {
-                            AppActionButton(
-                                onClick = {
-                                    onTestMove(move.id)
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            s.testPlaybackStartedFormat.format(move.displayName)
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.width(actionWidth).heightIn(min = 72.dp), tone = ActionTone.Secondary
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(s.test)
-                            }
-                            AppActionButton(
-                                onClick = { onOpenMoveDetails(move.id) },
-                                modifier = Modifier.width(actionWidth).heightIn(min = 72.dp)
-                            ) {
-                                Text(s.editMove)
-                            }
-                            }
-                        }
+                        if (selectedIds != null) Checkbox(checked = move.id in selectedIds, onCheckedChange = { onToggle(move.id) },
+                            modifier = Modifier.semantics { contentDescription = if (s === StringsDe) "${move.displayName} fürs Training auswählen" else "Select ${move.displayName} for training" })
+                    }
                     }
                 }
             }

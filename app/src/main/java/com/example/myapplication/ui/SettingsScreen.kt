@@ -72,7 +72,7 @@ import java.util.Locale
 
 private const val JONAS_VOICE_NAME = "de-de-x-deb-local"
 
-private fun voiceLabel(name: String, german: Boolean): String = when (name) {
+internal fun voiceLabel(name: String, german: Boolean): String = when (name) {
     JONAS_VOICE_NAME -> if (german) "Jonas · männlich" else "Jonas · male"
     else -> name
 }

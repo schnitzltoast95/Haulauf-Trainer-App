@@ -118,6 +118,10 @@ fun MoveInfoDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                if (move.notes.isNotBlank()) {
+                    Text(if (s === StringsDe) "Meine Notizen" else "My notes", style = MaterialTheme.typography.titleMedium)
+                    Text(move.notes, style = MaterialTheme.typography.bodyMedium)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 MoveHistoricalAttribution(
                     move,

@@ -99,7 +99,8 @@ fun TrainingSetupScreen(
     onSavePreset: (String) -> Unit,
     onBack: () -> Unit,
     savedName: String? = null,
-    onSaveCopy: ((String) -> Unit)? = null
+    onSaveCopy: ((String) -> Unit)? = null,
+    onBrowseExercises: (() -> Unit)? = null
 ) {
     val s = LocalStrings.current
     var showMoveInfoDialog by remember { mutableStateOf<Move?>(null) }
@@ -254,12 +255,12 @@ fun TrainingSetupScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            AppActionButton(
-                onClick = { showSelection = !showSelection },
-                modifier = Modifier.fillMaxWidth(), tone = ActionTone.Secondary
+            AppActionButton(tone = ActionTone.Secondary, 
+                onClick = { if (onBrowseExercises != null) onBrowseExercises() else showSelection = !showSelection },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
                 Text(
-                    text = if (showSelection) {
+                    text = if (showSelection && onBrowseExercises == null) {
                         if (de) "Auswahl schließen (${selectedValidIds.size})" else "Close selection (${selectedValidIds.size})"
                     } else {
                         if (de) "Übungen auswählen (${selectedValidIds.size})" else "Choose exercises (${selectedValidIds.size})"
@@ -277,6 +278,9 @@ fun TrainingSetupScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (onBrowseExercises != null) TextButton(onClick = { showSelection = !showSelection; showPriorities = true }) {
+                Text(if (showSelection) { if (de) "Gewichtung schließen" else "Hide weighting" } else { if (de) "Gewichtung anpassen" else "Adjust weighting" })
+            }
             if (showSelection) {
                 // Select moves
                 Surface(
