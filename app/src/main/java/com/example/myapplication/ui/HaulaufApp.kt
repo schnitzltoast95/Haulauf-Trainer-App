@@ -13,6 +13,9 @@ import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.AudioLevels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -46,6 +49,7 @@ fun HaulaufApp(
     }
 
     CompositionLocalProvider(LocalStrings provides strings) {
+    Box(Modifier.fillMaxSize()) {
     NavHost(
         navController = navController,
         startDestination = "home"
@@ -197,6 +201,18 @@ fun HaulaufApp(
                 onBack = { navController.popBackStack() }
             )
         }
+    }
+    BugReportOverlay(
+        context = {
+            val entry = navController.currentBackStackEntry
+            bugReportContext(
+                entry?.destination?.route ?: "home",
+                entry?.arguments?.getString("section"),
+                viewModel.trainingState.value
+            )
+        },
+        language = uiLanguage
+    )
     }
     }
 }
