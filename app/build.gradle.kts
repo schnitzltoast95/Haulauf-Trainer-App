@@ -47,6 +47,14 @@ android {
     }
 }
 
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        check(bugReportToken.isNotBlank()) {
+            "Release build requires HAULAUF_BUG_REPORT_TOKEN or haulauf.bugReportToken in local.properties; otherwise the bug report button disappears."
+        }
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
