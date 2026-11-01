@@ -15,6 +15,7 @@ Complete the pre-build checks on an APK built from the source revision intended 
 
 - [ ] Build and sign the release APK; verify package ID, version code/name, signing certificate, and SHA-256.
 - [ ] Install and launch that exact signed APK on a test device. Keep its result separate from tests of the debug APK.
+- [ ] Confirm the floating "Fehler melden" button is visible on the signed APK and opens a form that can be cancelled without sending. A release build without the configured bug-report token must fail.
 - [ ] Confirm that an audible move call plays from the signed APK.
 
 ## Release showcase video (required for every future release)
