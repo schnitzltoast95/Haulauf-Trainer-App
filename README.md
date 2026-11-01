@@ -43,7 +43,7 @@ Before the next signed release build, complete [RELEASE_CHECKLIST.md](RELEASE_CH
 
 Every future release also includes a short German showcase video made with the `brag` skill: real app footage, the changes since the previous release, and a matching poster. Follow the video section of the checklist and publish these assets with the APK.
 
-### Next release: 1.3.0 (versionCode 4)
+### Release 1.3.0 (versionCode 4)
 
 The published 1.2.0 used versionCode 3. Its preparation notes are in [release-records/v1.2.0.md](release-records/v1.2.0.md). Track current release evidence separately in [release-records/v1.3.0.md](release-records/v1.3.0.md).
 
