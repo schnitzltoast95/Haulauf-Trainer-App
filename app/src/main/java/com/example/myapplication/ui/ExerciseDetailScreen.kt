@@ -156,8 +156,9 @@ fun ExerciseDetailScreen(
             AppIconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
         }, actions = {
             if (onPreview != null) AppIconButton(onClick = onPreview) {
-                Icon(Icons.Default.PlayArrow, if (de) "Ansage anhören" else "Listen to call", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.PlayArrow, if (de) "Ansage anhören" else "Listen to call")
             }
+            if (onPreview != null && onEdit != null) Spacer(Modifier.width(8.dp))
             if (onEdit != null) Box {
                 AppIconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, if (de) "Übung bearbeiten" else "Edit exercise") }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
