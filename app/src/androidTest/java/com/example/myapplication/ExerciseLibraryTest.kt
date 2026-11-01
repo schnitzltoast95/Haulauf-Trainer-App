@@ -203,11 +203,18 @@ class ExerciseLibraryTest {
 
     @Test fun standardDetailMenuOffersSectionsButProtectsDescription() {
         var edited: ExerciseSection? = null
+        var addMedia = false
         compose.setContent { MyApplicationTheme(darkTheme = true) {
-            ExerciseDetailScreen(DEFAULT_MOVES.first(), onEdit = { edited = it }, onBack = {}, onPreview = {})
+            ExerciseDetailScreen(DEFAULT_MOVES.first(), onEdit = { edited = it }, onBack = {}, onPreview = {},
+                onAddMedia = { addMedia = true })
         } }
         compose.onNodeWithContentDescription("Ansage anhören").assertExists()
-        compose.onNodeWithContentDescription("Medien hinzufügen").assertDoesNotExist()
+        compose.onNodeWithText("Bild oder Video hinzufügen").performClick()
+        compose.runOnIdle { assertTrue(addMedia) }
+        compose.onNodeWithText("Meine Notizen").assertExists()
+        compose.onNodeWithText("Noch keine persönlichen Notizen.").assertExists()
+        compose.onNodeWithText("Notiz hinzufügen").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(ExerciseSection.NOTES, edited) }
         compose.onNodeWithContentDescription("Übung bearbeiten").performClick()
         compose.onNodeWithText("Beschreibung bearbeiten").assertIsNotEnabled()
         compose.onNodeWithText("Medien bearbeiten").performClick()
