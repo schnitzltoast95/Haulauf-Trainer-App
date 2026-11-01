@@ -42,7 +42,7 @@ fun HomeScreen(
     val s = LocalStrings.current
     val selectedMoveNames = allMoves
         .filter { it.id in preset.selectedMoveIds }
-        .map { it.displayName }
+        .map { it.trainingName }
         .sorted()
     BoxWithConstraints(
         modifier = Modifier

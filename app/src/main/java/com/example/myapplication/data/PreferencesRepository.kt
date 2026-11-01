@@ -70,6 +70,15 @@ class PreferencesRepository(private val context: Context) {
         } ?: emptyList()
     }
 
+    val moveIdentities: Flow<Map<String, MoveIdentity>> = context.dataStore.data.map { prefs ->
+        val stored = runCatching { JSONObject(prefs[MOVE_IDENTITIES_JSON] ?: "{}") }.getOrDefault(JSONObject())
+        buildMap {
+            stored.keys().forEach { id ->
+                stored.optJSONObject(id)?.let { put(id, readMoveIdentity(it)) }
+            }
+        }
+    }
+
     val moveAudioOverrides: Flow<Map<String, String>> = context.dataStore.data.map { prefs ->
         prefs[STRING_SET_KEY]?.mapNotNull { entry ->
             val parts = entry.split("|")
@@ -133,6 +142,43 @@ class PreferencesRepository(private val context: Context) {
         return move
     }
 
+    suspend fun addVariant(base: Move, displayName: String, master: String, source: String): Move {
+        val name = displayName.trim()
+        require(name.isNotEmpty())
+        val identity = MoveIdentity(
+            baseMoveId = base.identity.baseMoveId ?: base.id,
+            master = master.trim(),
+            source = source.trim()
+        )
+        val move = Move("custom_${UUID.randomUUID()}", name, base.category, identity = identity)
+        context.dataStore.edit { prefs ->
+            val custom = prefs[CUSTOM_MOVES_KEY].orEmpty().toMutableSet()
+            custom.add("${move.id}|v2:${android.net.Uri.encode(name)}|${move.category.name}")
+            prefs[CUSTOM_MOVES_KEY] = custom
+            val identities = JSONObject(prefs[MOVE_IDENTITIES_JSON] ?: "{}")
+            identities.put(move.id, writeMoveIdentity(identity))
+            prefs[MOVE_IDENTITIES_JSON] = identities.toString()
+        }
+        return move
+    }
+
+    suspend fun saveMoveIdentity(moveId: String, identity: MoveIdentity) {
+        val aliases = identity.aliases.map { it.copy(name = it.name.trim(), master = it.master.trim(), source = it.source.trim()) }
+            .filter { it.name.isNotEmpty() }
+        require(aliases.map { it.name.lowercase() }.distinct().size == aliases.size)
+        val normalized = identity.copy(
+            aliases = aliases,
+            preferredAlias = identity.preferredAlias?.takeIf { preferred -> aliases.any { it.name == preferred } },
+            master = identity.master.trim(),
+            source = identity.source.trim()
+        )
+        context.dataStore.edit { prefs ->
+            val identities = JSONObject(prefs[MOVE_IDENTITIES_JSON] ?: "{}")
+            identities.put(moveId, writeMoveIdentity(normalized))
+            prefs[MOVE_IDENTITIES_JSON] = identities.toString()
+        }
+    }
+
     suspend fun removeCustomMove(moveId: String) {
         require(moveId.startsWith("custom_"))
         val obsolete = mutableSetOf<String>()
@@ -157,6 +203,13 @@ class PreferencesRepository(private val context: Context) {
                 template.optJSONObject("movePriorities")?.remove(moveId)
             }
             prefs[SAVED_PRESETS_KEY] = templates.toString()
+            val identities = JSONObject(prefs[MOVE_IDENTITIES_JSON] ?: "{}")
+            identities.remove(moveId)
+            identities.keys().forEach { id ->
+                val identity = identities.optJSONObject(id) ?: return@forEach
+                if (identity.optString("baseMoveId") == moveId) identity.remove("baseMoveId")
+            }
+            prefs[MOVE_IDENTITIES_JSON] = identities.toString()
         }
         deleteOwnedAttachments(obsolete)
     }
@@ -487,6 +540,7 @@ class PreferencesRepository(private val context: Context) {
 
     companion object {
         private val MOVE_DETAILS_JSON = stringPreferencesKey("move_details_v2")
+        private val MOVE_IDENTITIES_JSON = stringPreferencesKey("move_identities_v1")
         private val GLOBAL_AUDIO = stringPreferencesKey("global_audio_v1")
         private val ROUNDS = intPreferencesKey("rounds")
         private val UNITS_PER_ROUND = intPreferencesKey("units_per_round")
@@ -511,6 +565,36 @@ class PreferencesRepository(private val context: Context) {
         private val TTS_SPEECH_RATE_KEY = floatPreferencesKey("tts_speech_rate")
         private val TTS_VOICE_NAME_KEY = stringPreferencesKey("tts_voice_name")
         private val UI_LANGUAGE_KEY = stringPreferencesKey("ui_language")
+    }
+
+    private fun readMoveIdentity(value: JSONObject): MoveIdentity {
+        val storedAliases = value.optJSONArray("aliases") ?: JSONArray()
+        val aliases = (0 until storedAliases.length()).mapNotNull { index ->
+            val item = storedAliases.optJSONObject(index) ?: return@mapNotNull null
+            val name = item.optString("name").trim()
+            if (name.isEmpty()) null else MoveAlias(name, item.optString("master"), item.optString("source"))
+        }
+        return MoveIdentity(
+            aliases = aliases,
+            preferredAlias = value.optString("preferredAlias").takeIf { preferred ->
+                !value.isNull("preferredAlias") && aliases.any { it.name == preferred }
+            },
+            baseMoveId = value.optString("baseMoveId").takeIf { !value.isNull("baseMoveId") && it.isNotBlank() },
+            master = value.optString("master"),
+            source = value.optString("source")
+        )
+    }
+
+    private fun writeMoveIdentity(identity: MoveIdentity): JSONObject = JSONObject().apply {
+        put("aliases", JSONArray().apply {
+            identity.aliases.forEach { alias ->
+                put(JSONObject().put("name", alias.name).put("master", alias.master).put("source", alias.source))
+            }
+        })
+        put("preferredAlias", identity.preferredAlias ?: JSONObject.NULL)
+        put("baseMoveId", identity.baseMoveId ?: JSONObject.NULL)
+        put("master", identity.master)
+        put("source", identity.source)
     }
 
     private fun parseMovePriorities(entries: Set<String>?): Map<String, Int> {

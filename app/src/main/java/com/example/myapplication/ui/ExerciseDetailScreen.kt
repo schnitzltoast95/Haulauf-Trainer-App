@@ -147,13 +147,17 @@ fun ExerciseDetailScreen(
     onBack: () -> Unit,
     onPreview: (() -> Unit)? = null,
     onAddMedia: (() -> Unit)? = null,
+    relatedVariants: List<Move> = emptyList(),
+    baseName: String? = null,
+    onOpenVariant: ((String) -> Unit)? = null,
+    onManageNames: (() -> Unit)? = null,
 ) {
     val s = LocalStrings.current
     val de = s === StringsDe
     var showSources by rememberSaveable(move.id) { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     Scaffold(topBar = {
-        TopAppBar(title = { Text(move.displayName) }, navigationIcon = {
+        TopAppBar(title = { Text(move.trainingName) }, navigationIcon = {
             AppIconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) }
         }, actions = {
             if (onPreview != null) AppIconButton(onClick = onPreview) {
@@ -221,6 +225,48 @@ fun ExerciseDetailScreen(
                     if (de) "Notiz hinzufügen" else "Add note"
                 } else if (de) "Notizen bearbeiten" else "Edit notes")
             }
+            Text(if (de) "Namen & Varianten" else "Names & variants", style = MaterialTheme.typography.titleMedium)
+            Text(
+                (if (move.identity.baseMoveId != null) {
+                    if (de) "Name der Variante: " else "Variant name: "
+                } else if (de) "Originalname: " else "Original name: ") + move.displayName,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (move.identity.baseMoveId != null && baseName != null) Text(
+                (if (de) "Eigene Variante von " else "Personal variant of ") + baseName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (move.identity.master.isNotBlank() || move.identity.source.isNotBlank()) Text(
+                (if (de) "Eigene Angabe: " else "Your information: ") +
+                    listOf(move.identity.master, move.identity.source).filter { it.isNotBlank() }.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            move.identity.aliases.forEach { alias ->
+                Text(
+                    alias.name + if (alias.name == move.identity.preferredAlias) {
+                        if (de) " · Trainingsname" else " · training name"
+                    } else "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (alias.master.isNotBlank() || alias.source.isNotBlank()) Text(
+                    (if (de) "Eigene Angabe: " else "Your information: ") +
+                        listOf(alias.master, alias.source).filter { it.isNotBlank() }.joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            relatedVariants.forEach { variant ->
+                if (onOpenVariant != null) TextButton(onClick = { onOpenVariant(variant.id) }) {
+                    Text((if (de) "Variante: " else "Variant: ") + variant.trainingName)
+                }
+            }
+            if (onManageNames != null) AppActionButton(
+                tone = ActionTone.Secondary,
+                onClick = onManageNames,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (de) "Namen & Varianten verwalten" else "Manage names & variants") }
         }
     }
 }

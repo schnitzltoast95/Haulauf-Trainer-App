@@ -103,7 +103,18 @@ fun MoveAudioListScreen(
     var showAddMoveDialog by rememberSaveable { mutableStateOf(false) }
 
     val visible = remember(allMoves, categoryFilter, query) {
-        allMoves.filter { (categoryFilter == null || it.category == categoryFilter) && it.displayName.contains(query, ignoreCase = true) }
+        val roots = allMoves.filter { it.identity.baseMoveId == null }
+        val ordered = roots.flatMap { root ->
+            listOf(root) + allMoves.filter { it.identity.baseMoveId == root.id }
+        }
+        (ordered + allMoves.filterNot { it in ordered }).filter { move ->
+            (categoryFilter == null || move.category == categoryFilter) &&
+                (query.isBlank() || listOf(move.displayName, move.trainingName, move.identity.master).any {
+                    it.contains(query, ignoreCase = true)
+                } || move.identity.aliases.any { alias ->
+                    alias.name.contains(query, ignoreCase = true) || alias.master.contains(query, ignoreCase = true)
+                })
+        }
     }
     Scaffold(
         bottomBar = {
@@ -182,12 +193,32 @@ fun MoveAudioListScreen(
                         val preview = move.historicalImageRes ?: move.media.firstOrNull { it.kind == com.example.myapplication.data.ExerciseMediaKind.IMAGE }?.path?.let { moveImageModel(LocalContext.current, it, null) }
                         if (preview != null && !compact) AsyncImage(preview, null, contentScale = ContentScale.Fit, modifier = Modifier.size(64.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(move.displayName, style = MaterialTheme.typography.titleMedium)
+                            Text(move.trainingName, style = MaterialTheme.typography.titleMedium)
+                            if (move.trainingName != move.displayName) Text(
+                                (if (move.identity.baseMoveId != null) {
+                                    if (s === StringsDe) "Name der Variante: " else "Variant name: "
+                                } else "Original: ") + move.displayName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            move.identity.baseMoveId?.let { baseId ->
+                                val baseName = allMoves.find { it.id == baseId }?.trainingName
+                                if (baseName != null) Text(
+                                    (if (s === StringsDe) "Variante von " else "Variant of ") + baseName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (move.identity.master.isNotBlank()) Text(
+                                move.identity.master,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Text(categoryLabel(move.category), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (preview != null && compact) AsyncImage(preview, null, contentScale = ContentScale.Fit, modifier = Modifier.size(64.dp))
                         }
                         if (selectedIds != null) Checkbox(checked = move.id in selectedIds, onCheckedChange = { onToggle(move.id) },
-                            modifier = Modifier.semantics { contentDescription = if (s === StringsDe) "${move.displayName} fürs Training auswählen" else "Select ${move.displayName} for training" })
+                            modifier = Modifier.semantics { contentDescription = if (s === StringsDe) "${move.trainingName} fürs Training auswählen" else "Select ${move.trainingName} for training" })
                     }
                     }
                 }

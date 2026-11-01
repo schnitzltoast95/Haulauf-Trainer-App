@@ -12,6 +12,7 @@ import com.example.myapplication.data.PreferencesRepository
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.data.Move
+import com.example.myapplication.data.MoveIdentity
 import com.example.myapplication.data.ExerciseSection
 import com.example.myapplication.data.withPersonalContent
 import com.example.myapplication.service.TrainingForegroundService
@@ -56,8 +57,11 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         emptyMap()
     )
 
-    val allMoves = combine(prefs.customMoves, moveInfo, prefs.exerciseAdditions) { custom, infoMap, additions ->
-        (DEFAULT_MOVES + custom).map { it.withPersonalContent(infoMap[it.id], additions[it.id]) }
+    val allMoves = combine(prefs.customMoves, moveInfo, prefs.exerciseAdditions, prefs.moveIdentities) { custom, infoMap, additions, identities ->
+        (DEFAULT_MOVES + custom).map { move ->
+            move.withPersonalContent(infoMap[move.id], additions[move.id])
+                .copy(identity = identities[move.id] ?: MoveIdentity())
+        }
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -216,6 +220,27 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val move = prefs.addCustomMove(displayName, category)
             onAdded(move.id)
+        }
+    }
+
+    fun addVariant(base: Move, displayName: String, master: String, source: String, onAdded: (String) -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                onAdded(prefs.addVariant(base, displayName, master, source).id)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) { onError() }
+        }
+    }
+
+    fun saveMoveIdentity(moveId: String, identity: MoveIdentity, onSaved: () -> Unit, onError: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                prefs.saveMoveIdentity(moveId, identity)
+                onSaved()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) { onError() }
         }
     }
 

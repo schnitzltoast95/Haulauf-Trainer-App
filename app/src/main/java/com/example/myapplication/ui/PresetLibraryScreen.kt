@@ -272,7 +272,7 @@ private fun PresetCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "${if (de) "Übungen" else "Exercises"}: ${selectedMoves.joinToString(", ") { it.displayName }}",
+                text = "${if (de) "Übungen" else "Exercises"}: ${selectedMoves.joinToString(", ") { it.trainingName }}",
                 style = MaterialTheme.typography.bodySmall,
                 color = HaulaufTextSecondary,
                 maxLines = 2,

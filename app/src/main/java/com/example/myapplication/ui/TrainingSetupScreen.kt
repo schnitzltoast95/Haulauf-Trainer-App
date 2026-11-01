@@ -272,7 +272,7 @@ fun TrainingSetupScreen(
                 if (de) "Wähle mindestens eine Übung zum Starten." else "Select at least one exercise to start.",
                 color = MaterialTheme.colorScheme.error
             ) else if (!showSelection) Text(
-                text = allMoves.filter { it.id in selectedValidIds }.joinToString(", ") { it.displayName },
+                text = allMoves.filter { it.id in selectedValidIds }.joinToString(", ") { it.trainingName },
                 maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall,
@@ -459,7 +459,7 @@ fun TrainingSetupScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = move.displayName,
+                                        text = move.trainingName,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.95f),
                                         modifier = Modifier.weight(1f)
