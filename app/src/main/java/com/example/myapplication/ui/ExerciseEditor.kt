@@ -216,7 +216,7 @@ fun ExerciseEditor(
     Scaffold(
         modifier = Modifier.imePadding(),
         topBar = { TopAppBar(title = { Text(exerciseSectionTitle(section, de)) },
-            navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) } }) },
+            navigationIcon = { AppIconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back) } }) },
         bottomBar = {
             Surface { AppActionButton(onClick = { save() }, enabled = dirty && title.isNotBlank() && !saving && !importing && !deleting && recorder == null,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).heightIn(min = 56.dp)) {

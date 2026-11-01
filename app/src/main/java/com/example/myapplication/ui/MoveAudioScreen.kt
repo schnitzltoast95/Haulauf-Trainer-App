@@ -120,7 +120,7 @@ fun MoveAudioListScreen(
             TopAppBar(
                 title = { Text(if (selectedIds != null) s.selectMoves else s.moveDetailsTitle) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    AppIconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = s.back,
@@ -129,7 +129,7 @@ fun MoveAudioListScreen(
                     }
                 },
                 actions = {
-                    if (selectedIds == null) IconButton(onClick = { showAddMoveDialog = true }) {
+                    if (selectedIds == null) AppIconButton(onClick = { showAddMoveDialog = true }) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = s.addMove,
