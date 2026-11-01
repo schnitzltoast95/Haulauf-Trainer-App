@@ -49,7 +49,7 @@ The published 1.2.0 used versionCode 3. Its preparation notes are in [release-re
 
 After the pre-build checks in RELEASE_CHECKLIST.md, build the regular `:app:assembleRelease` variant (without a review init script), then run `tools/sign-release.ps1 -Version 1.3.0` on the Windows build machine. The script checks the APK package/version, rejects versionCode 2 or lower, refuses to overwrite an existing release artifact and verifies the signing certificate against 1.1.0. Build Tools default to 36.0.0 and can be selected with `-BuildToolsVersion`.
 
-The key and its DPAPI-protected password remain in `../release-signing/` outside this public repository; use `-SigningDirectory` for a different private location. Back up both privately. The DPAPI password file can only be decrypted by the same Windows account on the same installation; migrating to another PC also requires a separately secured, recoverable password. Never commit keys or passwords.
+The key and its DPAPI-protected password remain outside this public repository; use `-SigningDirectory` for a different private location. A DPAPI file is bound to the Windows execution context that created it, which may differ between a normal PowerShell window and Codex. If decryption fails, restore the original release key into a **new** local directory using the private `HaulaufDev` recovery repository, then pass that directory with `-SigningDirectory`. Never commit keys or passwords to this public repository.
 
 Use the same release key to update GitHub release 1.1.0 without removing user data. Only the older APK tracked in `app/release/` has a different certificate and requires a one-time uninstall. Do not uninstall a current release to work around an accidental debug-signing mismatch.
 
