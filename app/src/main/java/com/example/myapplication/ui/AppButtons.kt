@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -97,7 +97,7 @@ fun AppLaunchButton(
     }
 }
 
-/** A consistent, labelled 48 dp icon action for app bars and compact toolbars. */
+/** A background-free 48 dp icon action for app bars and compact toolbars. */
 @Composable
 fun AppIconButton(
     onClick: () -> Unit,
@@ -105,13 +105,11 @@ fun AppIconButton(
     enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    FilledTonalIconButton(
+    IconButton(
         onClick = onClick,
         modifier = modifier.size(48.dp),
         enabled = enabled,
-        shape = RoundedCornerShape(16.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        colors = IconButtonDefaults.iconButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         content = content
