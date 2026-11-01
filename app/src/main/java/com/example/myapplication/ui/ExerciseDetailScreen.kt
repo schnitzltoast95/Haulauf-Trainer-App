@@ -146,6 +146,7 @@ fun ExerciseDetailScreen(
     onEdit: ((ExerciseSection) -> Unit)?,
     onBack: () -> Unit,
     onPreview: (() -> Unit)? = null,
+    onAddMedia: (() -> Unit)? = null,
 ) {
     val s = LocalStrings.current
     val de = s === StringsDe
@@ -176,7 +177,25 @@ fun ExerciseDetailScreen(
         })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(if (de) "Bilder & Videos" else "Images & videos", style = MaterialTheme.typography.titleMedium)
+            if (onAddMedia != null) AppActionButton(
+                tone = ActionTone.Secondary,
+                onClick = onAddMedia,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (de) "Bild oder Video hinzufügen" else "Add image or video")
+            }
             ExerciseGallery(move)
+            if (move.historicalImageRes == null && move.media.isEmpty()) {
+                Text(
+                    if (de) "Noch keine Bilder oder Videos vorhanden." else "No images or videos yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(if (de) "Beschreibung" else "Description", style = MaterialTheme.typography.titleMedium)
             Text(move.description?.takeIf { it.isNotBlank() } ?: s.noDescription, style = MaterialTheme.typography.bodyLarge)
             if (move.historicalImageRes != null || move.historicalTextSources.isNotEmpty()) {
                 TextButton(onClick = { showSources = !showSources }) {
@@ -186,9 +205,21 @@ fun ExerciseDetailScreen(
                 }
                 if (showSources) MoveHistoricalAttribution(move, showingHistoricalImage = move.historicalImageRes != null)
             }
-            if (move.notes.isNotBlank()) {
-                Text(if (de) "Notizen" else "Notes", style = MaterialTheme.typography.titleMedium)
-                Text(move.notes, style = MaterialTheme.typography.bodyLarge)
+            Text(if (de) "Meine Notizen" else "My notes", style = MaterialTheme.typography.titleMedium)
+            Text(
+                move.notes.takeIf { it.isNotBlank() }
+                    ?: if (de) "Noch keine persönlichen Notizen." else "No personal notes yet.",
+                style = if (move.notes.isNotBlank()) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                color = if (move.notes.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (onEdit != null) AppActionButton(
+                tone = ActionTone.Secondary,
+                onClick = { onEdit(ExerciseSection.NOTES) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (move.notes.isBlank()) {
+                    if (de) "Notiz hinzufügen" else "Add note"
+                } else if (de) "Notizen bearbeiten" else "Edit notes")
             }
         }
     }

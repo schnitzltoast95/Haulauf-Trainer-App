@@ -167,6 +167,7 @@ fun HaulaufApp(
             if (move != null) ExerciseDetailScreen(move,
                 onPreview = { viewModel.testMoveAudio(move.id) },
                 onEdit = { section -> navController.navigate("move_audio/${move.id}?section=${section.name}") },
+                onAddMedia = { navController.navigate("move_audio/${move.id}?section=MEDIA&add=true") },
                 onBack = { navController.popBackStack() })
         }
 
