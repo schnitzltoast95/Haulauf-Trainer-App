@@ -168,7 +168,25 @@ fun HaulaufApp(
                 onPreview = { viewModel.testMoveAudio(move.id) },
                 onEdit = { section -> navController.navigate("move_audio/${move.id}?section=${section.name}") },
                 onAddMedia = { navController.navigate("move_audio/${move.id}?section=MEDIA&add=true") },
+                relatedVariants = allMoves.filter { it.identity.baseMoveId == (move.identity.baseMoveId ?: move.id) && it.id != move.id },
+                baseName = move.identity.baseMoveId?.let { id -> allMoves.find { it.id == id }?.trainingName },
+                onOpenVariant = { id -> navController.navigate("move_details/$id") },
+                onManageNames = { navController.navigate("move_names/${move.id}") },
                 onBack = { navController.popBackStack() })
+        }
+
+        composable("move_names/{moveId}", arguments = listOf(navArgument("moveId") { type = NavType.StringType })) { entry ->
+            val move = allMoves.find { it.id == entry.arguments?.getString("moveId") }
+            if (move != null) NamesVariantsScreen(
+                move = move,
+                variants = allMoves.filter { it.identity.baseMoveId == (move.identity.baseMoveId ?: move.id) && it.id != move.id },
+                onSave = { identity, done, failed -> viewModel.saveMoveIdentity(move.id, identity, done, failed) },
+                onCreateVariant = { name, master, source, done, failed ->
+                    viewModel.addVariant(move, name, master, source, done, failed)
+                },
+                onOpenVariant = { id -> navController.navigate("move_details/$id") },
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("training") {

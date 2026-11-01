@@ -57,7 +57,7 @@ fun MoveInfoDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = move.displayName,
+                            text = move.trainingName,
                             style = MaterialTheme.typography.headlineSmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -89,7 +89,7 @@ fun MoveInfoDialog(
                 if (imageModel != null) {
                         AsyncImage(
                             model = imageModel,
-                            contentDescription = "${s.moveInfo}: ${move.displayName}",
+                            contentDescription = "${s.moveInfo}: ${move.trainingName}",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()

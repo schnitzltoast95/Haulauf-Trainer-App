@@ -29,6 +29,25 @@ data class Move(
     val historicalContextOnly: Boolean = false,
     val notes: String = "",
     val media: List<ExerciseMedia> = emptyList(),
+    val identity: MoveIdentity = MoveIdentity(),
+) : java.io.Serializable {
+    val trainingName: String get() = identity.preferredAlias
+        ?.takeIf { preferred -> identity.aliases.any { it.name == preferred } }
+        ?: displayName
+}
+
+data class MoveAlias(
+    val name: String,
+    val master: String = "",
+    val source: String = "",
+) : java.io.Serializable
+
+data class MoveIdentity(
+    val aliases: List<MoveAlias> = emptyList(),
+    val preferredAlias: String? = null,
+    val baseMoveId: String? = null,
+    val master: String = "",
+    val source: String = "",
 ) : java.io.Serializable
 
 enum class ExerciseSection { DATA, NOTES, MEDIA, AUDIO }

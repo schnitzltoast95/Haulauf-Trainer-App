@@ -67,7 +67,7 @@ class TrainingEngine(
                         val windowMs = getWindowMs()
                         val globalUnit = (round - 1) * preset.unitsPerRound + unit
 
-                        _state.value = TrainingState.Calling(move.displayName, globalUnit, round, preset.totalUnits, preset.rounds)
+                        _state.value = TrainingState.Calling(move.trainingName, globalUnit, round, preset.totalUnits, preset.rounds)
                         onPlayMove(move)
 
                         if (!scope.isActive) return@launch
@@ -92,7 +92,7 @@ class TrainingEngine(
                                 }
                                 continue
                             }
-                            _state.value = TrainingState.WaitingWindow(move.displayName, globalUnit, round, preset.totalUnits, preset.rounds, elapsed, windowMs)
+                            _state.value = TrainingState.WaitingWindow(move.trainingName, globalUnit, round, preset.totalUnits, preset.rounds, elapsed, windowMs)
 
                             if (preset.metronomeEnabled && elapsed < windowMs) {
                                 while (elapsed >= nextTickAtMs && nextTickAtMs < windowMs) {
