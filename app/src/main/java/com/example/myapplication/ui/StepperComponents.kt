@@ -97,7 +97,7 @@ fun StepperInline(
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             ),
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).semantics { contentDescription = label },
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).heightIn(min = 56.dp).semantics { contentDescription = label },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.onSurface,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
@@ -120,8 +120,8 @@ fun SmallRoundButton(
 ) {
     Surface(
         modifier = Modifier
-            .size(48.dp)
-            .clip(MaterialTheme.shapes.medium)
+            .size(56.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
             .semantics { contentDescription = label }
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick),
         color = MaterialTheme.colorScheme.surfaceContainerHigh

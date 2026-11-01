@@ -73,7 +73,7 @@ fun MoveInfoDialog(
                             color = HaulaufGoldLight
                         )
                     }
-                    IconButton(onClick = onDismiss) {
+                    AppIconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = s.close,

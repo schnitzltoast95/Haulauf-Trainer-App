@@ -91,7 +91,7 @@ fun HomeScreen(
 
             }
         }
-        IconButton(
+        AppIconButton(
             onClick = onOpenSettings,
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 16.dp)
         ) {
@@ -107,7 +107,7 @@ private fun LibraryButtonsRow(
     onOpenMoveDetails: () -> Unit
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val buttonWidth = if (maxWidth < 340.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) maxWidth else (maxWidth - 12.dp) / 2
+        val buttonWidth = if (maxWidth < 360.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) maxWidth else (maxWidth - 12.dp) / 2
         WrappingControls {
         AppActionButton(
             onClick = onOpenPresets,

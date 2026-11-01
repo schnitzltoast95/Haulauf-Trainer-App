@@ -69,12 +69,12 @@ fun PresetLibraryScreen(
             TopAppBar(
                 title = { Text(s.trainingLibraryTitle) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    AppIconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
                     }
                 },
                 actions = {
-                    IconButton(onClick = onCreateNew) {
+                    AppIconButton(onClick = onCreateNew) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = s.newTraining
@@ -240,7 +240,7 @@ private fun PresetCard(
                     color = HaulaufTextSecondary
                 )
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = if (de) "Weitere Aktionen" else "More actions") }
+                    AppIconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = if (de) "Weitere Aktionen" else "More actions") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text(if (de) "Kopie erstellen" else "Create copy") }, onClick = { menu = false; onCopy() })
                         DropdownMenuItem(text = { Text(if (de) "Umbenennen" else "Rename") }, onClick = { menu = false; onRename() })
@@ -309,12 +309,12 @@ private fun PresetCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val actionWidth = if (maxWidth < 320.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
+                val actionWidth = if (maxWidth < 360.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
                     maxWidth else (maxWidth - 8.dp) / 2
                 WrappingControls {
                 AppActionButton(
                     onClick = if (selectedMoves.isEmpty()) onEdit else onStart,
-                    modifier = Modifier.width(actionWidth).heightIn(min = 72.dp)
+                    modifier = Modifier.width(actionWidth)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
@@ -327,7 +327,7 @@ private fun PresetCard(
                 }
                 AppActionButton(
                     onClick = onEdit,
-                    modifier = Modifier.width(actionWidth).heightIn(min = 72.dp), tone = ActionTone.Secondary
+                    modifier = Modifier.width(actionWidth), tone = ActionTone.Secondary
                 ) {
                     Text(s.edit)
                 }

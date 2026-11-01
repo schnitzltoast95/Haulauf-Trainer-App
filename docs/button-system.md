@@ -1,19 +1,24 @@
-# Button-Konzept (Issue #24)
+# Button-Konzept (Issue #29)
 
-Buttons sind nach **Bedeutung und Einsatzort** vereinheitlicht, nicht nach einem einzigen Aussehen.
+Alle normalen Aktionen haben eine Mindesthöhe von 56 dp und eine Form mit 16 dp Ecken.
+Längere Beschriftungen dürfen die Höhe vergrößern; nebeneinanderliegende Aktionen
+werden auf schmalen Displays oder bei großer Schrift untereinander angeordnet.
 
-| Variante | Einsatz | Darstellung |
+| Element | Einsatz | Darstellung |
 | --- | --- | --- |
-| Primär | Nächster Schritt oder Speichern einer Bearbeitung | Gefüllter Button in der Theme-Primärfarbe |
-| Sekundär | Alternative Aktion, Navigation, Vorschau oder Aufklappen | Umrissener Button mit Oberflächen-Textfarbe |
-| Destruktiv | Training beenden oder eine andere folgenreiche Aktion | Umrissener Button mit Fehlerfarbe; Bestätigung bei Datenverlust |
-| Start | Training von Startseite oder Konfiguration beginnen | Große goldene Startfläche mit Verlauf; deaktivierter Zustand ohne Verlauf |
-| Training mit Handschuhen | Pause, Fortsetzen, Neustart und Beenden während der Einheit | Mindestens 96 dp hoch, volle Breite; Bedeutung bestimmt weiterhin primär/sekundär/destruktiv |
-| Textaktion | Dialogbestätigung, Abbrechen oder untergeordnete Aktion im Textfluss | Material `TextButton`; für destruktive Aktionen `AppDestructiveTextButton` mit Fehlerfarbe und korrektem deaktiviertem Zustand |
-| Icon-Aktion | Zurück, Schließen, Einstellungen und Menü in App-Leisten | Material `IconButton` mit verständlicher `contentDescription` |
-| Auswahl | Kategorie, Filter oder Sprache mit auswählbarem Zustand | `FilterChip` beziehungsweise eindeutig markierte Textauswahl |
-| Zahlensteuerung | Plus und Minus an Eingabefeldern | Eigene 48-dp-Steuerfläche mit zugänglichem Namen |
+| Primär | Die nächste Hauptaktion einer Ansicht, etwa Starten, Speichern oder Neu anlegen | Gefüllt in der Theme-Primärfarbe |
+| Sekundär | Navigation, Bearbeiten, Auswahl und alternative Aktionen | Gefüllt in der erhöhten Oberflächenfarbe |
+| Destruktiv | Beenden oder Löschen | Umrandet in der Fehlerfarbe; bei Datenverlust mit Bestätigung |
+| Textaktion | Untergeordnete Aktion im Textfluss oder Dialog | Material `TextButton` |
+| Icon-Aktion | Zurück, Schließen, Hinzufügen, Einstellungen, Vorschau und Menüs | Gemeinsamer `AppIconButton`, 48 dp, erhöhte Oberflächenfarbe, zugänglicher Name |
+| Zahlensteuerung | Plus und Minus an Zahlenfeldern | 56 dp, gleiche erhöhte Oberflächenfarbe und Eckenform; Eingabefeld mindestens 56 dp |
+| Auswahl | Kategorie, Filter und Sprache | `FilterChip` oder klar markierte Textauswahl mit sichtbarem Zustand |
 
-`AppActionButton`, `AppLaunchButton` und `AppDestructiveTextButton` in `AppButtons.kt` sind die gemeinsamen Compose-Komponenten. Normale Aktionen sind mindestens 56 dp hoch; die Startaktion und ihre benachbarte Speicheraktion in der Trainingskonfiguration mindestens 88 dp. Zusammenstehende Aktionen bekommen die gleiche Mindesthöhe. Bei schmalen Flächen oder großer Schrift stehen sie untereinander, damit deutsche und englische Beschriftungen vollständig bleiben. Die App nutzt die Farben und Zustände aus `MaterialTheme`; einzelne Screens sollen keine eigenen Button-Farben, Formen oder Innenabstände setzen.
+`AppActionButton` ist die gemeinsame Basis. `AppLaunchButton` nutzt dieselbe primäre
+Darstellung und 56 dp Höhe. Nur die Steuerflächen **während einer laufenden Einheit**
+nutzen `ActionSize.Glove` mit mindestens 96 dp und voller Breite. Dies gilt für Pause,
+Fortsetzen, Neustart und Beenden. Ihre Bedeutung bestimmt weiterhin die Farbrolle.
+Die Bedienbarkeit mit den tatsächlich verwendeten Fechthandschuhen ist am Gerät zu prüfen.
 
-Eine große Fläche ist eine bewusste Ausnahme für die Trainingsbedienung mit Handschuhen. Ihre tatsächliche Erkennbarkeit mit den verwendeten Handschuhen muss weiterhin am Gerät geprüft werden.
+Buttons übernehmen Farben und Zustände aus `MaterialTheme`. Einzelne Screens setzen
+keine eigenen Höhen, Formen oder Farben für dieselbe Aktionsrolle.

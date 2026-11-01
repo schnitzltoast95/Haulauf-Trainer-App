@@ -172,7 +172,7 @@ internal fun BugReportOverlay(context: () -> String, language: String) {
             } else Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(R.drawable.ic_report_bug), null, modifier = Modifier.padding(start = 12.dp).size(24.dp))
                 Text(if (german) "Fehler melden" else "Report bug", modifier = Modifier.padding(horizontal = 8.dp))
-                IconButton(onClick = { setCompact(true) }) {
+                AppIconButton(onClick = { setCompact(true) }) {
                     Icon(when (dockEdge) { "left" -> Icons.Default.KeyboardArrowLeft; "top" -> Icons.Default.KeyboardArrowUp; "bottom" -> Icons.Default.KeyboardArrowDown; else -> Icons.Default.KeyboardArrowRight },
                         if (german) "Meldebutton minimieren" else "Minimize report button")
                 }

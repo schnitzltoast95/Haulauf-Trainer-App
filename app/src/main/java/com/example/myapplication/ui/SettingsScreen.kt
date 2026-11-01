@@ -121,7 +121,7 @@ fun SettingsScreen(
                 title = { Text(s.settings) },
                 navigationIcon = {},
                 actions = {
-                    IconButton(onClick = onClose) {
+                    AppIconButton(onClick = onClose) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = s.close,

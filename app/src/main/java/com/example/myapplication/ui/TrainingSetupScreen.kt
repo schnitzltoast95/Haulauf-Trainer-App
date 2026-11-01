@@ -190,7 +190,7 @@ fun TrainingSetupScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    AppIconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = s.back)
                     }
                 }
@@ -208,7 +208,7 @@ fun TrainingSetupScreen(
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    val actionWidth = if (LocalDensity.current.fontScale > 1.3f || maxWidth < 280.dp) maxWidth else (maxWidth - 12.dp) / 2
+                    val actionWidth = if (LocalDensity.current.fontScale > 1.3f || maxWidth < 360.dp) maxWidth else (maxWidth - 12.dp) / 2
                     WrappingControls {
                     AppLaunchButton(
                         onClick = onStart,
@@ -221,7 +221,7 @@ fun TrainingSetupScreen(
                         onClick = { saveCopy = false; showSavePresetDialog = true },
                         modifier = Modifier.width(actionWidth),
                         tone = ActionTone.Secondary,
-                        size = ActionSize.Prominent
+                        size = ActionSize.Regular
                     ) {
                         Text(
                             text = if (savedName != null) s.save else s.savePreset,
@@ -478,7 +478,7 @@ fun TrainingSetupScreen(
                                                 }
                                             }
                                         }
-                                        IconButton(
+                                        AppIconButton(
                                             onClick = { showMoveInfoDialog = move },
                                             modifier = Modifier.size(48.dp)
                                         ) {
