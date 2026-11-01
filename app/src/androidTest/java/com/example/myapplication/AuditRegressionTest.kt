@@ -300,7 +300,7 @@ class AuditRegressionTest {
                 HomeScreen(preset, DEFAULT_MOVES, {}, {}, {}, {}, {}, {})
             }
         } }
-        compose.onNodeWithText("Training starten").assertHeightIsAtLeast(88.dp)
+        compose.onNodeWithText("Training starten").assertHeightIsAtLeast(ActionSize.Regular.minHeight)
         compose.onNodeWithText("Start in 5s", substring = true).assertDoesNotExist()
         capture("home-start-height")
     }
@@ -319,7 +319,7 @@ class AuditRegressionTest {
         val saveHeight = saveBounds.bottom - saveBounds.top
         assertTrue("Start and save differ: $startHeight vs $saveHeight",
             kotlin.math.abs((startHeight - saveHeight).value) < 1f)
-        assertTrue(startHeight >= 88.dp)
+        assertTrue(startHeight >= ActionSize.Regular.minHeight)
     }
 
 }
