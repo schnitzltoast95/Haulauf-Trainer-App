@@ -9,6 +9,8 @@ import com.example.myapplication.data.AudioLevels
 import com.example.myapplication.data.DEFAULT_MOVES
 import com.example.myapplication.data.MoveCategory
 import com.example.myapplication.data.PreferencesRepository
+import com.example.myapplication.data.StatisticsRepository
+import com.example.myapplication.data.StatisticsSnapshot
 import com.example.myapplication.data.SavedPreset
 import com.example.myapplication.data.TrainingPreset
 import com.example.myapplication.data.Move
@@ -25,6 +27,10 @@ import kotlinx.coroutines.launch
 
 class HaulaufViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = PreferencesRepository(application)
+    private val statistics = StatisticsRepository(application)
+    private var activeSessionId: String? = null
+    private val _statisticsSnapshot = MutableStateFlow(StatisticsSnapshot())
+    val statisticsSnapshot: StateFlow<StatisticsSnapshot> = _statisticsSnapshot.asStateFlow()
     private val audioManager = TrainingAudioManager(
         application,
         volumeCall = 1f,
@@ -153,13 +159,16 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun startTraining(p: TrainingPreset, onNavigate: () -> Unit) {
+    private suspend fun startTraining(p: TrainingPreset, onNavigate: () -> Unit) {
         val app = getApplication<Application>()
         val movesSnapshot = allMoves.value
         if (movesSnapshot.none { it.id in p.selectedMoveIds }) return
 
         engine?.stop()
         engineStateJob?.cancel()
+        activeSessionId?.let { statistics.finishSession(it, completed = false) }
+        val sessionId = statistics.beginSession()
+        activeSessionId = sessionId
         ContextCompat.startForegroundService(app, Intent(app, TrainingForegroundService::class.java))
         val levels = globalAudio.value ?: AudioLevels.from(p)
         audioManager.setVolumes(levels.call, levels.beep, levels.tick)
@@ -171,6 +180,8 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
             onPlayMove = { move ->
                 audioManager.playMoveAudio(move, overridesSnapshot[move.id])
             },
+            onUnitCompleted = { move, unit -> statistics.recordCall(sessionId, unit, move) },
+            onTrainingCompleted = { statistics.finishSession(sessionId, completed = true) },
             onPlayEndBeep = { audioManager.playEndBeep() },
             onPlayCountdownBeep = { secondsRemaining -> audioManager.playCountdownBeep(secondsRemaining) },
             onPlayRoundFinishedSignal = { audioManager.playRoundFinishedSignal() },
@@ -200,6 +211,8 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun stopTraining() {
+        val sessionId = activeSessionId
+        activeSessionId = null
         engine?.stop()
         engine = null
         engineStateJob?.cancel()
@@ -207,11 +220,16 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
         _trainingState.value = TrainingState.Idle
         audioManager.stopAll()
         stopTrainingService()
+        if (sessionId != null) viewModelScope.launch { statistics.finishSession(sessionId, completed = false) }
     }
 
     fun restartTraining() {
         stopTraining()
-        startTraining(preset.value) {}
+        viewModelScope.launch { startTraining(preset.value) {} }
+    }
+
+    fun refreshStatistics() {
+        viewModelScope.launch { _statisticsSnapshot.value = statistics.snapshot(allMoves.value) }
     }
 
     fun getMoveOverride(moveId: String): String? = moveOverrides.value[moveId]

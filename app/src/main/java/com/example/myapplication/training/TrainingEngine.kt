@@ -17,6 +17,8 @@ class TrainingEngine(
     private val preset: TrainingPreset,
     private val availableMoves: List<Move>,
     private val onPlayMove: suspend (Move) -> Unit,
+    private val onUnitCompleted: suspend (Move, Int) -> Unit = { _, _ -> },
+    private val onTrainingCompleted: suspend () -> Unit = {},
     private val onPlayEndBeep: () -> Unit,
     private val onPlayCountdownBeep: (Int) -> Unit,
     private val onPlayRoundFinishedSignal: () -> Unit,
@@ -104,6 +106,7 @@ class TrainingEngine(
                             if (elapsed >= windowMs) {
                                 onStopMetronome()
                                 if (preset.endBeepEnabled) onPlayEndBeep()
+                                onUnitCompleted(move, globalUnit)
                                 lastCalledMoveId = move.id
                                 break
                             }
@@ -136,6 +139,7 @@ class TrainingEngine(
             }
 
             if (!scope.isActive) return@launch
+            onTrainingCompleted()
             onPlayTrainingFinishedSignal()
             _state.value = TrainingState.Finished
         }

@@ -34,6 +34,7 @@ fun HaulaufApp(
     val allMoves by viewModel.allMoves.collectAsState()
     val savedPresets by viewModel.savedPresets.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
+    val statisticsSnapshot by viewModel.statisticsSnapshot.collectAsState()
     val ttsSpeechRate by viewModel.ttsSpeechRate.collectAsState()
     val ttsVoiceName by viewModel.ttsVoiceName.collectAsState()
 
@@ -75,6 +76,7 @@ fun HaulaufApp(
             HomeScreen(
                 preset = preset,
                 allMoves = allMoves,
+                german = uiLanguage == "de",
                 onQuickstart = {
                     if (allMoves.none { it.id in preset.selectedMoveIds }) openEditor(preset)
                     else viewModel.startQuickstart { navController.navigate("training") }
@@ -83,7 +85,16 @@ fun HaulaufApp(
                 onEditCurrentSession = { openEditor(preset) },
                 onOpenMoveDetails = { navController.navigate("move_audio_list") },
                 onOpenSettings = { navController.navigate("settings") },
-                onOpenPresets = { navController.navigate("presets") }
+                onOpenPresets = { navController.navigate("presets") },
+                onOpenStatistics = { navController.navigate("statistics") }
+            )
+        }
+        composable("statistics") {
+            LaunchedEffect(Unit) { viewModel.refreshStatistics() }
+            StatisticsScreen(
+                snapshot = statisticsSnapshot,
+                german = uiLanguage == "de",
+                onBack = { navController.popBackStack() },
             )
         }
         composable("setup") {

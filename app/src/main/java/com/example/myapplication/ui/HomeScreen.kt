@@ -32,12 +32,14 @@ import com.example.myapplication.ui.theme.HaulaufTextSecondary
 fun HomeScreen(
     preset: TrainingPreset,
     allMoves: List<Move>,
+    german: Boolean,
     onQuickstart: () -> Unit,
     onConfigureTraining: () -> Unit,
     onEditCurrentSession: () -> Unit,
     onOpenMoveDetails: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPresets: () -> Unit,
+    onOpenStatistics: () -> Unit,
 ) {
     val s = LocalStrings.current
     val selectedMoveNames = allMoves
@@ -83,6 +85,12 @@ fun HomeScreen(
                     onOpenPresets = onOpenPresets,
                     onOpenMoveDetails = onOpenMoveDetails
                 )
+                Spacer(Modifier.height(12.dp))
+                AppActionButton(
+                    onClick = onOpenStatistics,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    tone = ActionTone.Secondary,
+                ) { Text(if (german) "Statistik & Abzeichen" else "Statistics & badges") }
                 Text(s.historicalSubtitle,
                     modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
                     textAlign = TextAlign.Center,
