@@ -385,7 +385,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val ttsSpeechRate: Flow<Float> = context.dataStore.data.map { prefs ->
-        prefs[TTS_SPEECH_RATE_KEY] ?: 1.0f
+        prefs[TTS_SPEECH_RATE_KEY] ?: 1.4f
     }
 
     val ttsVoiceName: Flow<String?> = context.dataStore.data.map { prefs ->
