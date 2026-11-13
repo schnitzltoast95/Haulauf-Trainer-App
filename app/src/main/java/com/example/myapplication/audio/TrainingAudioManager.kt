@@ -27,7 +27,7 @@ class TrainingAudioManager(
 ) {
     private val uriPlayer = AsyncUriPlayer(context)
     private var tts: TextToSpeech? = null
-    private var ttsSpeechRate: Float = 1.4f
+    private var ttsSpeechRate: Float = 1.0f
     private var ttsVoiceName: String? = null
     private var toneGenerator: ToneGenerator? = null
     private var soundPool: SoundPool? = null

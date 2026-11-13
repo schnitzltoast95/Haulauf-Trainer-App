@@ -77,7 +77,7 @@ class HaulaufViewModel(application: Application) : AndroidViewModel(application)
     val ttsSpeechRate = prefs.ttsSpeechRate.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        1.4f
+        1.0f
     )
 
     val ttsVoiceName = prefs.ttsVoiceName.stateIn(
