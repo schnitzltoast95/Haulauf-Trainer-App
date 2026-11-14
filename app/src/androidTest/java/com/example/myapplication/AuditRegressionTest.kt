@@ -257,7 +257,7 @@ class AuditRegressionTest {
     @Test fun homeLargeTextKeepsBothLibrariesReachable() {
         compose.setContent { MyApplicationTheme(darkTheme = true) {
             CompositionLocalProvider(LocalStrings provides StringsDe, LocalDensity provides Density(LocalDensity.current.density, 2f)) {
-                Box(Modifier.width(320.dp).fillMaxHeight()) { HomeScreen(TrainingPreset(), emptyList(), {}, {}, {}, {}, {}, {}) }
+                Box(Modifier.width(320.dp).fillMaxHeight()) { HomeScreen(TrainingPreset(), emptyList(), true, {}, {}, {}, {}, {}, {}, {}) }
             }
         } }
         compose.onNodeWithText(StringsDe.trainingsShort).performScrollTo().assertIsDisplayed()
@@ -297,7 +297,7 @@ class AuditRegressionTest {
         assertEquals(5000L, preset.initialCountdownMs)
         compose.setContent { MyApplicationTheme(darkTheme = true) {
             CompositionLocalProvider(LocalStrings provides StringsDe) {
-                HomeScreen(preset, DEFAULT_MOVES, {}, {}, {}, {}, {}, {})
+                HomeScreen(preset, DEFAULT_MOVES, true, {}, {}, {}, {}, {}, {}, {})
             }
         } }
         compose.onNodeWithText("Training starten").assertHeightIsAtLeast(ActionSize.Regular.minHeight)

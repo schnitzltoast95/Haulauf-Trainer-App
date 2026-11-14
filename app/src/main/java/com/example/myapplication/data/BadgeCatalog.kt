@@ -1,27 +1,27 @@
 package com.example.myapplication.data
 
-val BADGE_THRESHOLDS = listOf(25, 100, 300, 1000)
+val BADGE_THRESHOLDS = listOf(250, 1000, 3000, 10000)
 
 private val germanBadges = mapOf(
-    "oberhau" to listOf("Dachklopfer", "Höhenjäger", "Kronenspalter", "Zwergenschlächter"),
-    "unterhau" to listOf("Bodenfeger", "Aufsteiger", "Tiefenbrecher", "Herr der Unterlinie"),
-    "twerhau" to listOf("Querläufer", "Klingenwender", "Horizontjäger", "Herr der Zwerch"),
-    "schielhau" to listOf("Seitenblick", "Schrägseher", "Blickfänger", "Meister des Schielens"),
-    "krumphau" to listOf("Kurvenkratzer", "Winkeljäger", "Hakenklinge", "Herr der krummen Wege"),
-    "scheitelhau" to listOf("Mittellinienfinder", "Scheiteltreffer", "Kronenteiler", "Scheitelrichter"),
-    "zornhau" to listOf("Zornfunke", "Schultersturm", "Zornklinge", "Gewitter des Zorns"),
-    "sturzhau" to listOf("Sturzpilot", "Klingenstürzer", "Spitzenstürmer", "Herr des Sturzes"),
-    "prellhau" to listOf("Rückpraller", "Schwungfänger", "Prellkünstler", "König des Rückschlags"),
-    "blendhau" to listOf("Schattenstreifer", "Blendwerk", "Nebelklinge", "Meister der Täuschung"),
-    "vom_tag" to listOf("Tagwächter", "Hochwache", "Sonnenhüter", "Wächter des Tages"),
-    "alber" to listOf("Bodenwächter", "Geduldige Klinge", "Meister der Ruhe", "König des Alber"),
-    "pflug" to listOf("Furchenzieher", "Linienpflüger", "Eisenpflüger", "Herr der Furche"),
-    "ochs" to listOf("Hornträger", "Eckwächter", "Klingenochs", "Herr der Hörner"),
-    "gerader_stich" to listOf("Punktesucher", "Linienfinder", "Zielstecher", "Meister der geraden Linie"),
-    "halber_stich" to listOf("Kurzentschlossener", "Distanzspieler", "Halber Schritt", "Meister des kurzen Stichs"),
-    "wechselstich" to listOf("Seitenwechsler", "Linienwechsler", "Lückenfinder", "Herr des Wechsels"),
-    "durchstich" to listOf("Lückensucher", "Linienbrecher", "Durchdringer", "Herr der offenen Linie"),
-    "unterstich" to listOf("Tiefensucher", "Aufwärtsstecher", "Tiefenlanze", "Herr des Unterstichs"),
+    "oberhau" to listOf("Dachklopfer", "Kronenspalter", "Scheitelrichter", "Zwergenschlächter"),
+    "unterhau" to listOf("Aufsteiger", "Klingenheber", "Tiefstarter", "Aufstand von unten"),
+    "twerhau" to listOf("Quereinsteiger", "Querfechter", "Zwerchmeister", "Alles läuft quer"),
+    "schielhau" to listOf("Schneidenwender", "Gegenhaukenner", "Meister der kurzen Schneide", "Kurz und schneidig"),
+    "krumphau" to listOf("Winkelspieler", "Handkreuzer", "Klingenfänger", "Meister ums Eck"),
+    "scheitelhau" to listOf("Linienfinder", "Scheitelteiler", "Kronenspalter", "Scheitel nach Maß"),
+    "zornhau" to listOf("Schulterstarter", "Diagonalklinge", "Zornmeister", "Donner von der Schulter"),
+    "sturzhau" to listOf("Spitzenwender", "Ochs im Anflug", "Sturzmeister", "Oben hui, Spitze voraus"),
+    "prellhau" to listOf("Rückpraller", "Flachklopfer", "Prellmeister", "Kommt alles zurück"),
+    "blendhau" to listOf("Klingenbinder", "Heftwender", "Schnellklinge", "Überraschung im Band"),
+    "vom_tag" to listOf("Hochwache", "Dachwächter", "Meister der Oberhut", "Alles Gute kommt von oben"),
+    "alber" to listOf("Bodenwache", "Tiefhalter", "Meister der tiefen Hut", "Tiefenentspannt"),
+    "pflug" to listOf("Furchenzieher", "Spitzenpflüger", "Meister der Furche", "Gut bestellt"),
+    "ochs" to listOf("Hornträger", "Hochhutwächter", "Meister der Hörner", "Spitze Hörner"),
+    "gerader_stich" to listOf("Linienfinder", "Punktlandung", "Meister der Geraden", "Direkt auf den Punkt"),
+    "halber_stich" to listOf("Kurzstarter", "Distanzkenner", "Meister der kurzen Strecke", "In der Kürze liegt die Spitze"),
+    "wechselstich" to listOf("Seitenwechsler", "Linienwechsler", "Wechselmeister", "Neue Linie, gleicher Punkt"),
+    "durchstich" to listOf("Lückenfinder", "Lückennutzer", "Meister der offenen Linie", "Lücke genutzt"),
+    "unterstich" to listOf("Tiefstarter", "Aufwärtsspitze", "Meister der unteren Linie", "Spitze von unten"),
 )
 
 fun badgeTitles(moveId: String, moveName: String, german: Boolean): List<String> =
