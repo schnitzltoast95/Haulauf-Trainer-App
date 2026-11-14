@@ -83,6 +83,40 @@ class TrainingEngineTest {
         assertEquals(0, finishes)
     }
 
+    @Test
+    fun replayAfterPauseCompletesOnlyOneUnit() = runBlocking {
+        var announcements = 0
+        val completedUnits = mutableListOf<Int>()
+        lateinit var engine: TrainingEngine
+        engine = TrainingEngine(
+            scope = this,
+            preset = TrainingPreset(
+                rounds = 1, unitsPerRound = 1, reactionIntervalMs = 1,
+                initialCountdownMs = 1000, selectedMoveIds = setOf("oberhau"),
+                endBeepEnabled = false
+            ),
+            availableMoves = DEFAULT_MOVES,
+            onPlayMove = {
+                announcements++
+                if (announcements == 1) engine.pause()
+            },
+            onUnitCompleted = { _, unit -> completedUnits += unit },
+            onPlayEndBeep = {},
+            onPlayCountdownBeep = {},
+            onPlayRoundFinishedSignal = {},
+            onPlayTrainingFinishedSignal = {},
+            onPlayMetronomeTick = {},
+            onStopMetronome = {},
+        )
+        engine.start()
+        withTimeout(3000) { engine.state.first { it is TrainingState.Paused } }
+        engine.resume()
+        withTimeout(5000) { engine.state.first { it is TrainingState.Finished } }
+
+        assertEquals(2, announcements)
+        assertEquals(listOf(1), completedUnits)
+    }
+
     private fun createEngine(
         scope: CoroutineScope,
         preset: TrainingPreset,

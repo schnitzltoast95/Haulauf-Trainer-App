@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,12 +33,14 @@ import com.example.myapplication.ui.theme.HaulaufTextSecondary
 fun HomeScreen(
     preset: TrainingPreset,
     allMoves: List<Move>,
+    german: Boolean,
     onQuickstart: () -> Unit,
     onConfigureTraining: () -> Unit,
     onEditCurrentSession: () -> Unit,
     onOpenMoveDetails: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPresets: () -> Unit,
+    onOpenStatistics: () -> Unit,
 ) {
     val s = LocalStrings.current
     val selectedMoveNames = allMoves
@@ -83,6 +86,18 @@ fun HomeScreen(
                     onOpenPresets = onOpenPresets,
                     onOpenMoveDetails = onOpenMoveDetails
                 )
+                Spacer(Modifier.height(12.dp))
+                AppActionButton(
+                    onClick = onOpenStatistics,
+                    modifier = Modifier.fillMaxWidth(),
+                    tone = ActionTone.Secondary,
+                ) {
+                    Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (german) "Statistik & Abzeichen" else "Statistics & badges",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center)
+                }
                 Text(s.historicalSubtitle,
                     modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
                     textAlign = TextAlign.Center,
