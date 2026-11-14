@@ -106,9 +106,9 @@ class TrainingAudioManager(
     suspend fun playMoveAudio(move: com.example.myapplication.data.Move, overrideUri: String?) {
         val uri = overrideUri
         if (uri != null) {
-            if (!uriPlayer.play(uri, volumeCall)) playMoveCall(move.trainingName)
+            if (!uriPlayer.play(uri, volumeCall)) playMoveCall(move.ttsCallText())
         } else {
-            playMoveCall(move.trainingName)
+            playMoveCall(move.ttsCallText())
         }
     }
 
