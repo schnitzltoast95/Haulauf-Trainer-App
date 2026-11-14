@@ -41,7 +41,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -590,7 +589,7 @@ fun TrainingSetupScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Slider(
+                            AppSlider(
                                 value = intervalSec.coerceIn(0.05f, 5f),
                                 onValueChange = { v ->
                                     intervalSec = (v * 20).toInt() / 20f
@@ -625,7 +624,7 @@ fun TrainingSetupScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Slider(
+                                AppSlider(
                                     modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Minimum"; stateDescription = "%.2f ${s.seconds}".format(intervalMinSec) },
                                     value = intervalMinSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->
@@ -644,7 +643,7 @@ fun TrainingSetupScreen(
                                 Text("%.2fs".format(intervalMinSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                Slider(
+                                AppSlider(
                                     modifier = Modifier.semantics { contentDescription = "${s.reactionInterval}: Maximum"; stateDescription = "%.2f ${s.seconds}".format(intervalMaxSec) },
                                     value = intervalMaxSec.coerceIn(0.05f, 5f),
                                     onValueChange = { v ->

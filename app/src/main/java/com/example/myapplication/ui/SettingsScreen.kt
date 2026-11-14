@@ -1,5 +1,8 @@
 package com.example.myapplication.ui
 
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
+import com.example.myapplication.R
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -38,7 +41,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
@@ -153,6 +155,7 @@ fun SettingsScreen(
             // Call volume
             SettingsAudioCard(
                 title = s.callVolume,
+                icon = R.drawable.ic_settings_volume,
                 subtitle = "${(preset.volumeCall * 100).toInt()}%",
                 value = preset.volumeCall,
                 onValueChange = { onPresetChange(preset.copy(volumeCall = it)) }
@@ -161,6 +164,7 @@ fun SettingsScreen(
             // End beep volume + toggle
             SettingsAudioCard(
                 title = s.endBeep,
+                icon = R.drawable.ic_settings_bell,
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
                 onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
@@ -182,8 +186,8 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp).selectableGroup()) {
-                    Text(if (german) "Ansagestimme" else "Announcement voice",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                    SettingsCardHeading(if (german) "Ansagestimme" else "Announcement voice",
+                        R.drawable.ic_settings_voice)
                     Spacer(Modifier.height(12.dp))
                     VoiceChoice(
                         label = if (german) "Standardstimme" else "Default voice",
@@ -230,18 +234,14 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = s.ttsSpeed,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    SettingsCardHeading(s.ttsSpeed, R.drawable.ic_settings_speed)
                     Text(
                         text = s.ttsSpeedDesc,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    Slider(
+                    AppSlider(
                         modifier = Modifier.semantics { contentDescription = s.ttsSpeed; stateDescription = "%.2f".format(ttsSpeechRate) },
                         value = ttsSpeechRate.coerceIn(0.5f, 2f),
                         onValueChange = { onTtsSpeechRateChange(it) },
@@ -272,11 +272,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = s.language,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    SettingsCardHeading(s.language, R.drawable.ic_settings_language)
                     Spacer(Modifier.height(12.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -340,11 +336,10 @@ private fun SettingsMetronomeCard(
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(s.metronome, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface)
+            SettingsCardHeading(s.metronome, R.drawable.ic_settings_metronome)
             Spacer(Modifier.height(12.dp))
             Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
+            AppSlider(
                 modifier = Modifier.semantics { contentDescription = s.tickVolume; stateDescription = "${(preset.volumeTick * 100).toInt()}%" },
                         value = preset.volumeTick.coerceIn(0f, 1f),
                 onValueChange = { onPresetChange(preset.copy(volumeTick = it.coerceIn(0f, 1f))) },
@@ -363,6 +358,7 @@ private fun SettingsMetronomeCard(
 @Composable
 private fun SettingsAudioCard(
     title: String,
+    @DrawableRes icon: Int,
     subtitle: String,
     value: Float,
     onValueChange: (Float) -> Unit,
@@ -380,8 +376,7 @@ private fun SettingsAudioCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(title, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                SettingsCardHeading(title, icon, Modifier.weight(1f))
                 if (onToggleEnabled != null) {
                     Switch(
                         modifier = Modifier.semantics { contentDescription = title },
@@ -396,7 +391,7 @@ private fun SettingsAudioCard(
             }
             Spacer(Modifier.height(12.dp))
             Column {
-                Slider(
+                AppSlider(
                     modifier = Modifier.semantics { contentDescription = title; stateDescription = subtitle },
                         value = value.coerceIn(0f, 1f),
                     onValueChange = { onValueChange(it.coerceIn(0f, 1f)) },
@@ -420,3 +415,14 @@ private fun SettingsAudioCard(
 }
 
 
+
+@Composable
+private fun SettingsCardHeading(title: String, @DrawableRes icon: Int, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(painterResource(icon), contentDescription = null,
+            modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(title, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+    }
+}
