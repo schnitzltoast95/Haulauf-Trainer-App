@@ -191,7 +191,7 @@ fun SettingsScreen(
                         Icon(Icons.Filled.Settings, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Text(if (german) "Ansagestimme" else "Announcement voice",
-                            style = MaterialTheme.typography.bodyMedium)
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                     }
                     Spacer(Modifier.height(12.dp))
                     VoiceChoice(
