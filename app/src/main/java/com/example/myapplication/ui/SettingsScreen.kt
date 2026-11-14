@@ -27,8 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -154,7 +152,6 @@ fun SettingsScreen(
             }
             // Call volume
             SettingsAudioCard(
-                icon = Icons.Filled.Settings,
                 title = s.callVolume,
                 subtitle = "${(preset.volumeCall * 100).toInt()}%",
                 value = preset.volumeCall,
@@ -163,7 +160,6 @@ fun SettingsScreen(
 
             // End beep volume + toggle
             SettingsAudioCard(
-                icon = Icons.Filled.Notifications,
                 title = s.endBeep,
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
@@ -186,13 +182,8 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp).selectableGroup()) {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Filled.Settings, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(if (german) "Ansagestimme" else "Announcement voice",
-                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                    }
+                    Text(if (german) "Ansagestimme" else "Announcement voice",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(12.dp))
                     VoiceChoice(
                         label = if (german) "Standardstimme" else "Default voice",
@@ -349,26 +340,8 @@ private fun SettingsMetronomeCard(
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = s.metronome,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+            Text(s.metronome, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.height(12.dp))
             Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Slider(
@@ -389,7 +362,6 @@ private fun SettingsMetronomeCard(
 
 @Composable
 private fun SettingsAudioCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     value: Float,
@@ -408,20 +380,8 @@ private fun SettingsAudioCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                Text(title, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 if (onToggleEnabled != null) {
                     Switch(
                         modifier = Modifier.semantics { contentDescription = title },
