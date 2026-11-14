@@ -1,5 +1,8 @@
 package com.example.myapplication.ui
 
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
+import com.example.myapplication.R
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -8,7 +11,10 @@ import android.speech.tts.Voice
 import androidx.compose.ui.semantics.*
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.RadioButton
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,12 +30,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +41,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
@@ -96,7 +98,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val german = s === StringsDe
     var availableVoices by remember { mutableStateOf<List<Voice>>(emptyList()) }
-    var voicePickerOpen by remember { mutableStateOf(false) }
     var previewTts by remember { mutableStateOf<TextToSpeech?>(null) }
     DisposableEffect(context) {
         val engine = TextToSpeech(context) { status ->
@@ -140,24 +141,21 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = s.audio,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(if (german) "Lautstärke" else "Volume",
+                style = MaterialTheme.typography.titleLarge)
 
             Text(if (legacyAudio) {
-                if (german) "Bisherige Lautstärken bleiben je Training erhalten. Eine Änderung hier setzt gemeinsame Pegel für alle Trainings." else "Existing per-training levels are preserved. Changing a slider sets shared levels for all trainings."
+                if (german) "Aktiv: Lautstärken aus der jeweiligen Trainingskonfiguration oder Vorlage. Eine Änderung an den Reglern hier legt gemeinsame Lautstärken für alle Trainings fest." else "Active: volumes from each training configuration or saved plan. Changing a slider here sets shared volumes for all training sessions."
             } else {
-                if (german) "Diese Lautstärken gelten für alle Trainings." else "These levels apply to all trainings."
+                if (german) "Aktiv: gemeinsame Lautstärken für alle Trainings. Sie ersetzen die Werte aus Trainingskonfigurationen und Vorlagen." else "Active: shared volumes for all training sessions. They override the values in training configurations and saved plans."
             }, style = MaterialTheme.typography.bodySmall)
             if (!legacyAudio) TextButton(onClick = onUseLegacyAudio) {
-                Text(if (german) "Gespeicherte Trainingspegel verwenden" else "Use saved training levels")
+                Text(if (german) "Lautstärken aus Trainings verwenden" else "Use volumes from training plans")
             }
             // Call volume
             SettingsAudioCard(
-                icon = Icons.Filled.Settings,
                 title = s.callVolume,
+                icon = R.drawable.ic_settings_volume,
                 subtitle = "${(preset.volumeCall * 100).toInt()}%",
                 value = preset.volumeCall,
                 onValueChange = { onPresetChange(preset.copy(volumeCall = it)) }
@@ -165,8 +163,8 @@ fun SettingsScreen(
 
             // End beep volume + toggle
             SettingsAudioCard(
-                icon = Icons.Filled.Notifications,
                 title = s.endBeep,
+                icon = R.drawable.ic_settings_bell,
                 subtitle = "${(preset.volumeBeep * 100).toInt()}%",
                 value = preset.volumeBeep,
                 onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
@@ -179,32 +177,54 @@ fun SettingsScreen(
                 onPresetChange = onPresetChange
             )
 
-            // TTS Speed
+            Text(if (german) "Stimme & Sprechtempo" else "Voice & speech speed",
+                modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleLarge)
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        if (german) "Ansagestimme" else "Announcement voice",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                Column(Modifier.padding(16.dp).selectableGroup()) {
+                    SettingsCardHeading(if (german) "Ansagestimme" else "Announcement voice",
+                        R.drawable.ic_settings_voice)
+                    Spacer(Modifier.height(12.dp))
+                    VoiceChoice(
+                        label = if (german) "Standardstimme" else "Default voice",
+                        selected = ttsVoiceName == null,
+                        german = german,
+                        onSelect = { onTtsVoiceChange(null) },
+                        onPreview = {
+                            previewTts?.apply {
+                                language = Locale.GERMAN
+                                setSpeechRate(ttsSpeechRate)
+                                speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview_default")
+                            }
+                        }
                     )
-                    Text(
-                        if (german) "Wähle zwischen der bisherigen Standardstimme und Jonas. Importierte Aufnahmen behalten ihre eigene Stimme."
-                        else "Choose the original system voice or Jonas. Imported recordings keep their own voice.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        ttsVoiceName?.let { voiceLabel(it, german) } ?: if (german) "Standardstimme" else "Default voice",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    TextButton(onClick = { voicePickerOpen = true }) {
-                        Text(if (german) "Stimme auswählen / anhören" else "Choose / preview voice")
+                    if (availableVoices.isEmpty()) {
+                        Text(if (german) "Jonas ist auf diesem Gerät nicht verfügbar." else "Jonas is not available on this device.")
                     }
+                    availableVoices.forEach { voice ->
+                        VoiceChoice(
+                            label = voiceLabel(voice.name, german),
+                            selected = ttsVoiceName == voice.name,
+                            german = german,
+                            onSelect = { onTtsVoiceChange(voice.name) },
+                            onPreview = {
+                                previewTts?.apply {
+                                    this.voice = voice
+                                    setSpeechRate(ttsSpeechRate)
+                                    speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview")
+                                }
+                            }
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (german) "Deutsche Ansagestimmen. Über die Wiedergabetaste hörst du eine Probe. Eigene Aufnahmen bleiben unverändert."
+                        else "German announcement voices. Use the play button to preview. Your recordings stay unchanged.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -214,18 +234,14 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = s.ttsSpeed,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    SettingsCardHeading(s.ttsSpeed, R.drawable.ic_settings_speed)
                     Text(
                         text = s.ttsSpeedDesc,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    Slider(
+                    AppSlider(
                         modifier = Modifier.semantics { contentDescription = s.ttsSpeed; stateDescription = "%.2f".format(ttsSpeechRate) },
                         value = ttsSpeechRate.coerceIn(0.5f, 2f),
                         onValueChange = { onTtsSpeechRateChange(it) },
@@ -238,12 +254,16 @@ fun SettingsScreen(
                         )
                     )
                     Text(
-                        text = "%.2f".format(ttsSpeechRate),
+                        text = String.format(if (german) Locale.GERMAN else Locale.ENGLISH, "%.1f", ttsSpeechRate) +
+                            if (kotlin.math.abs(ttsSpeechRate - 1.4f) < 0.01f) { if (german) " · Standard" else " · Default" } else "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            Text(if (german) "Darstellung" else "Display",
+                modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleLarge)
 
             // UI Language
             Surface(
@@ -252,11 +272,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = s.language,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    SettingsCardHeading(s.language, R.drawable.ic_settings_language)
                     Spacer(Modifier.height(12.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -280,58 +296,31 @@ fun SettingsScreen(
         }
     }
 
-    if (voicePickerOpen) {
-        AlertDialog(
-            onDismissRequest = { voicePickerOpen = false },
-            title = { Text(if (german) "Deutsche Stimmen" else "German voices") },
-            text = {
-                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
-                    Text(
-                        if (german) "Jonas ist der App-Name der auf diesem Gerät geprüften männlichen Stimme. Hör die Probe vor der Auswahl an."
-                        else "Jonas is the app name for the male voice tested on this device. Preview it before choosing.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { onTtsVoiceChange(null); voicePickerOpen = false }, modifier = Modifier.weight(1f)) {
-                            Text(if (german) "Standardstimme" else "Default voice")
-                        }
-                        TextButton(onClick = {
-                            previewTts?.apply {
-                                language = Locale.GERMAN
-                                setSpeechRate(ttsSpeechRate)
-                                speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview_default")
-                            }
-                        }) {
-                            Text(if (german) "Probe" else "Preview")
-                        }
-                    }
-                    if (availableVoices.isEmpty()) {
-                        Text(if (german) "Jonas ist auf diesem Gerät nicht verfügbar." else "Jonas is not available on this device.")
-                    }
-                    availableVoices.forEach { voice ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { onTtsVoiceChange(voice.name); voicePickerOpen = false }, modifier = Modifier.weight(1f)) {
-                                Text(voiceLabel(voice.name, german))
-                            }
-                            TextButton(onClick = {
-                                previewTts?.apply {
-                                    this.voice = voice
-                                    setSpeechRate(ttsSpeechRate)
-                                    speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview")
-                                }
-                            }) {
-                                Text(if (german) "Probe" else "Preview")
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { voicePickerOpen = false }) {
-                    Text(if (german) "Schließen" else "Close")
-                }
+}
+
+@Composable
+internal fun VoiceChoice(label: String, selected: Boolean, german: Boolean,
+    onSelect: () -> Unit, onPreview: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).heightIn(min = 56.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            RadioButton(selected = selected, onClick = null)
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.bodyLarge,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+                if (selected) Text(if (german) "Ausgewählt" else "Selected",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
-        )
+        }
+        AppIconButton(onClick = onPreview) {
+            Icon(Icons.Filled.PlayArrow,
+                contentDescription = if (german) "$label anhören" else "Preview $label",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -347,29 +336,10 @@ private fun SettingsMetronomeCard(
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = s.metronome,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+            SettingsCardHeading(s.metronome, R.drawable.ic_settings_metronome)
             Spacer(Modifier.height(12.dp))
             Text(s.tickVolume, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
+            AppSlider(
                 modifier = Modifier.semantics { contentDescription = s.tickVolume; stateDescription = "${(preset.volumeTick * 100).toInt()}%" },
                         value = preset.volumeTick.coerceIn(0f, 1f),
                 onValueChange = { onPresetChange(preset.copy(volumeTick = it.coerceIn(0f, 1f))) },
@@ -387,8 +357,8 @@ private fun SettingsMetronomeCard(
 
 @Composable
 private fun SettingsAudioCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
+    @DrawableRes icon: Int,
     subtitle: String,
     value: Float,
     onValueChange: (Float) -> Unit,
@@ -406,20 +376,7 @@ private fun SettingsAudioCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                SettingsCardHeading(title, icon, Modifier.weight(1f))
                 if (onToggleEnabled != null) {
                     Switch(
                         modifier = Modifier.semantics { contentDescription = title },
@@ -434,7 +391,7 @@ private fun SettingsAudioCard(
             }
             Spacer(Modifier.height(12.dp))
             Column {
-                Slider(
+                AppSlider(
                     modifier = Modifier.semantics { contentDescription = title; stateDescription = subtitle },
                         value = value.coerceIn(0f, 1f),
                     onValueChange = { onValueChange(it.coerceIn(0f, 1f)) },
@@ -458,3 +415,14 @@ private fun SettingsAudioCard(
 }
 
 
+
+@Composable
+private fun SettingsCardHeading(title: String, @DrawableRes icon: Int, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(painterResource(icon), contentDescription = null,
+            modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(title, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+    }
+}
