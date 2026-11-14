@@ -38,14 +38,14 @@ class OpenSourceLicensesDeviceTest {
         compose.waitUntil(10000) { compose.onAllNodesWithText("Bibliothek suchen").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Bibliothek suchen").performTextInput("okhttp")
         compose.onNode(hasText("okhttp") and !hasSetTextAction()).performClick()
-        compose.onNodeWithText("Projektwebseite Ã¶ffnen").assertExists()
+        compose.onNodeWithText("Projektwebseite öffnen").assertExists()
         compose.onAllNodesWithText("Apache License", substring = true).onFirst().assertExists()
-        compose.onNodeWithContentDescription("ZurÃ¼ck").performClick()
+        compose.onNodeWithContentDescription("Zurück").performClick()
         compose.onNodeWithText("Bibliothek suchen").assertExists()
         assertEquals(0, exits)
         compose.onNodeWithText("Bibliothek suchen").performTextReplacement("no-such-library")
         compose.onNodeWithText("Keine passende Bibliothek gefunden.").assertExists()
-        compose.onNodeWithContentDescription("ZurÃ¼ck").performClick()
+        compose.onNodeWithContentDescription("Zurück").performClick()
         compose.runOnIdle { assertEquals(1, exits) }
     }
 }

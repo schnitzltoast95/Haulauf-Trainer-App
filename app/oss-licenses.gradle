@@ -69,5 +69,5 @@ def generateOss = tasks.register('generateOssLicenses') {
 }
 android.sourceSets.main.assets.srcDir(ossOutput.get().asFile)
 tasks.configureEach {
-    if (name.matches('merge.*Assets') || name == 'lintVitalAnalyzeRelease') dependsOn(generateOss)
+    if (name == 'preBuild' || name.matches('merge.*Assets') || name.matches('.*[Ll]int.*')) dependsOn(generateOss)
 }

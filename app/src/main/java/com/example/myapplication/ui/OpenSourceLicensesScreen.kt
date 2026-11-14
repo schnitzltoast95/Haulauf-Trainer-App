@@ -84,7 +84,10 @@ fun OpenSourceLicensesScreen(german: Boolean, onBack: () -> Unit) {
                             ids.forEach { id ->
                                 // Paragraphs keep long license/source documents efficient and readable.
                                 val paragraphs = catalog.texts.getValue(id).split(Regex("""\n\s*\n"""))
-                                    .flatMap { it.chunked(4000) }
+                                    .map { paragraph ->
+                                        if (id in selected.sources) paragraph
+                                        else paragraph.lines().joinToString(" ") { it.trim() }.trim()
+                                    }.flatMap { it.chunked(4000) }
                                 items(paragraphs) { paragraph ->
                                     SelectionContainer { Text(paragraph, style = MaterialTheme.typography.bodyMedium) }
                                 }
