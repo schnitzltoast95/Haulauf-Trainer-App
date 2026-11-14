@@ -226,8 +226,13 @@ fun HaulaufApp(
                 uiLanguage = uiLanguage,
                 onUiLanguageChange = viewModel::saveUiLanguage,
                 onPresetChange = { viewModel.saveGlobalAudio(AudioLevels.from(it)) },
-                onClose = { navController.popBackStack() }
+                onClose = { navController.popBackStack() },
+                onOpenLicenses = { navController.navigate("licenses") }
             )
+        }
+
+        composable("licenses") {
+            OpenSourceLicensesScreen(german = uiLanguage == "de", onBack = { navController.popBackStack() })
         }
 
         composable("move_audio_list") {
