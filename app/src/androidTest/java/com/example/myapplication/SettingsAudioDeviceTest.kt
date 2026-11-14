@@ -46,7 +46,10 @@ class SettingsAudioDeviceTest {
                     legacyAudio = false, onUseLegacyAudio = { restoreCalls++ })
             }
         } }
-        compose.onNodeWithText("Stimme & Sprechtempo").assertIsDisplayed()
+        compose.onNodeWithText("Lautstärke").assertIsDisplayed()
+        compose.onNodeWithText("Standardstimme").performScrollTo().assertIsSelected()
+        compose.onNodeWithContentDescription("Standardstimme anhören").assertExists()
+        compose.onNodeWithText("Stimme auswählen / anhören").assertDoesNotExist()
         compose.onNodeWithText("1,4 · Standard").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Lautstärken aus Trainings verwenden").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, restoreCalls) }

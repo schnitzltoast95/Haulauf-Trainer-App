@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,7 +98,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val german = s === StringsDe
     var availableVoices by remember { mutableStateOf<List<Voice>>(emptyList()) }
-    var voicePickerOpen by remember { mutableStateOf(false) }
     var previewTts by remember { mutableStateOf<TextToSpeech?>(null) }
     DisposableEffect(context) {
         val engine = TextToSpeech(context) { status ->
@@ -143,35 +141,95 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(if (german) "Stimme & Sprechtempo" else "Voice & speech speed",
+            Text(if (german) "Lautstärke" else "Volume",
                 style = MaterialTheme.typography.titleLarge)
 
-            // TTS Speed
+            Text(if (legacyAudio) {
+                if (german) "Aktiv: Lautstärken aus der jeweiligen Trainingskonfiguration oder Vorlage. Eine Änderung an den Reglern hier legt gemeinsame Lautstärken für alle Trainings fest." else "Active: volumes from each training configuration or saved plan. Changing a slider here sets shared volumes for all training sessions."
+            } else {
+                if (german) "Aktiv: gemeinsame Lautstärken für alle Trainings. Sie ersetzen die Werte aus Trainingskonfigurationen und Vorlagen." else "Active: shared volumes for all training sessions. They override the values in training configurations and saved plans."
+            }, style = MaterialTheme.typography.bodySmall)
+            if (!legacyAudio) TextButton(onClick = onUseLegacyAudio) {
+                Text(if (german) "Lautstärken aus Trainings verwenden" else "Use volumes from training plans")
+            }
+            // Call volume
+            SettingsAudioCard(
+                icon = Icons.Filled.Settings,
+                title = s.callVolume,
+                subtitle = "${(preset.volumeCall * 100).toInt()}%",
+                value = preset.volumeCall,
+                onValueChange = { onPresetChange(preset.copy(volumeCall = it)) }
+            )
+
+            // End beep volume + toggle
+            SettingsAudioCard(
+                icon = Icons.Filled.Notifications,
+                title = s.endBeep,
+                subtitle = "${(preset.volumeBeep * 100).toInt()}%",
+                value = preset.volumeBeep,
+                onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
+                enabled = true
+            )
+
+            // Metronome global audio only (per-training behavior is configured in Advanced settings)
+            SettingsMetronomeCard(
+                preset = preset,
+                onPresetChange = onPresetChange
+            )
+
+            Text(if (german) "Stimme & Sprechtempo" else "Voice & speech speed",
+                modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleLarge)
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardDefaults.shape,
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        if (german) "Ansagestimme" else "Announcement voice",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        if (german) "Wähle zwischen der bisherigen Standardstimme und Jonas. Importierte Aufnahmen behalten ihre eigene Stimme."
-                        else "Choose the original system voice or Jonas. Imported recordings keep their own voice.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        ttsVoiceName?.let { voiceLabel(it, german) } ?: if (german) "Standardstimme" else "Default voice",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    TextButton(onClick = { voicePickerOpen = true }) {
-                        Text(if (german) "Stimme auswählen / anhören" else "Choose / preview voice")
+                Column(Modifier.padding(16.dp).selectableGroup()) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Settings, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(if (german) "Ansagestimme" else "Announcement voice",
+                            style = MaterialTheme.typography.bodyMedium)
                     }
+                    Spacer(Modifier.height(12.dp))
+                    VoiceChoice(
+                        label = if (german) "Standardstimme" else "Default voice",
+                        selected = ttsVoiceName == null,
+                        german = german,
+                        onSelect = { onTtsVoiceChange(null) },
+                        onPreview = {
+                            previewTts?.apply {
+                                language = Locale.GERMAN
+                                setSpeechRate(ttsSpeechRate)
+                                speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview_default")
+                            }
+                        }
+                    )
+                    if (availableVoices.isEmpty()) {
+                        Text(if (german) "Jonas ist auf diesem Gerät nicht verfügbar." else "Jonas is not available on this device.")
+                    }
+                    availableVoices.forEach { voice ->
+                        VoiceChoice(
+                            label = voiceLabel(voice.name, german),
+                            selected = ttsVoiceName == voice.name,
+                            german = german,
+                            onSelect = { onTtsVoiceChange(voice.name) },
+                            onPreview = {
+                                previewTts?.apply {
+                                    this.voice = voice
+                                    setSpeechRate(ttsSpeechRate)
+                                    speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview")
+                                }
+                            }
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (german) "Deutsche Ansagestimmen. Über die Wiedergabetaste hörst du eine Probe. Eigene Aufnahmen bleiben unverändert."
+                        else "German announcement voices. Use the play button to preview. Your recordings stay unchanged.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -213,42 +271,6 @@ fun SettingsScreen(
                 }
             }
 
-            Text(if (german) "Lautstärke" else "Volume",
-                modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleLarge)
-
-            Text(if (legacyAudio) {
-                if (german) "Aktiv: Lautstärken aus der jeweiligen Trainingskonfiguration oder Vorlage. Eine Änderung an den Reglern hier legt gemeinsame Lautstärken für alle Trainings fest." else "Active: volumes from each training configuration or saved plan. Changing a slider here sets shared volumes for all training sessions."
-            } else {
-                if (german) "Aktiv: gemeinsame Lautstärken für alle Trainings. Sie ersetzen die Werte aus Trainingskonfigurationen und Vorlagen." else "Active: shared volumes for all training sessions. They override the values in training configurations and saved plans."
-            }, style = MaterialTheme.typography.bodySmall)
-            if (!legacyAudio) TextButton(onClick = onUseLegacyAudio) {
-                Text(if (german) "Lautstärken aus Trainings verwenden" else "Use volumes from training plans")
-            }
-            // Call volume
-            SettingsAudioCard(
-                icon = Icons.Filled.Settings,
-                title = s.callVolume,
-                subtitle = "${(preset.volumeCall * 100).toInt()}%",
-                value = preset.volumeCall,
-                onValueChange = { onPresetChange(preset.copy(volumeCall = it)) }
-            )
-
-            // End beep volume + toggle
-            SettingsAudioCard(
-                icon = Icons.Filled.Notifications,
-                title = s.endBeep,
-                subtitle = "${(preset.volumeBeep * 100).toInt()}%",
-                value = preset.volumeBeep,
-                onValueChange = { onPresetChange(preset.copy(volumeBeep = it)) },
-                enabled = true
-            )
-
-            // Metronome global audio only (per-training behavior is configured in Advanced settings)
-            SettingsMetronomeCard(
-                preset = preset,
-                onPresetChange = onPresetChange
-            )
-
             Text(if (german) "Darstellung" else "Display",
                 modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleLarge)
 
@@ -287,58 +309,6 @@ fun SettingsScreen(
         }
     }
 
-    if (voicePickerOpen) {
-        AlertDialog(
-            onDismissRequest = { voicePickerOpen = false },
-            title = { Text(if (german) "Deutsche Stimmen" else "German voices") },
-            text = {
-                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()).selectableGroup(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        if (german) "Jonas ist der App-Name der auf diesem Gerät geprüften männlichen Stimme. Hör die Probe vor der Auswahl an."
-                        else "Jonas is the app name for the male voice tested on this device. Preview it before choosing.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    VoiceChoice(
-                        label = if (german) "Standardstimme" else "Default voice",
-                        selected = ttsVoiceName == null,
-                        german = german,
-                        onSelect = { onTtsVoiceChange(null); voicePickerOpen = false },
-                        onPreview = {
-                            previewTts?.apply {
-                                language = Locale.GERMAN
-                                setSpeechRate(ttsSpeechRate)
-                                speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview_default")
-                            }
-                        }
-                    )
-                    if (availableVoices.isEmpty()) {
-                        Text(if (german) "Jonas ist auf diesem Gerät nicht verfügbar." else "Jonas is not available on this device.")
-                    }
-                    availableVoices.forEach { voice ->
-                        VoiceChoice(
-                            label = voiceLabel(voice.name, german),
-                            selected = ttsVoiceName == voice.name,
-                            german = german,
-                            onSelect = { onTtsVoiceChange(voice.name); voicePickerOpen = false },
-                            onPreview = {
-                                previewTts?.apply {
-                                    this.voice = voice
-                                    setSpeechRate(ttsSpeechRate)
-                                    speak("Oberhau. Unterhau. Ochs.", TextToSpeech.QUEUE_FLUSH, null, "voice_preview")
-                                }
-                            }
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { voicePickerOpen = false }) {
-                    Text(if (german) "Schließen" else "Close")
-                }
-            }
-        )
-    }
 }
 
 @Composable

@@ -1,8 +1,8 @@
 # Audioeinstellungen
 
-Die Einstellungen behalten das vorhandene native Schwarz/Gold-Design und sind in Stimme & Sprechtempo, Lautstärke und Darstellung gegliedert. Statistik und Wochenchallenge bleiben unverändert.
+Die Einstellungen behalten das vorhandene native Schwarz/Gold-Design und sind in Lautstärke, Stimme & Sprechtempo und Darstellung gegliedert. Statistik und Wochenchallenge bleiben unverändert.
 
-Die Stimmauswahl verwendet eine exklusive Radioauswahl mit sichtbarem Auswahlkreis, goldener Hervorhebung und dem Text „Ausgewählt“. Andere Stimmen sind neutral. Die separate Hörprobe verändert die gespeicherte Auswahl nicht. Auswahl und Hörprobe haben eigene zugängliche Bedienelemente mit mindestens 48 dp Höhe.
+Die Stimmauswahl steht direkt in der Ansagestimme-Kachel, ohne zusätzlichen Dialog oder Öffnen-Knopf. Die Kachel verwendet die gleichen Abstände und den gleichen Titelstil mit Symbol wie die Lautstärkekacheln. Die Stimmauswahl verwendet eine exklusive Radioauswahl mit sichtbarem Auswahlkreis, goldener Hervorhebung und dem Text „Ausgewählt“. Andere Stimmen sind neutral. Die separate Hörprobe verändert die gespeicherte Auswahl nicht. Auswahl und Hörprobe haben eigene zugängliche Bedienelemente mit mindestens 48 dp Höhe.
 
 Die Sprechgeschwindigkeit nennt unabhängig vom aktuellen Wert den App-Standard 1,4 (Englisch 1.4). Beim Standardwert erscheint zusätzlich „Standard“ neben dem aktuellen Wert. Bestehende Werte werden nicht zurückgesetzt.
 
