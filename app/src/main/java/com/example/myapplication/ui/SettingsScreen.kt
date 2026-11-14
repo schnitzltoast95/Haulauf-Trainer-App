@@ -92,7 +92,8 @@ fun SettingsScreen(
     onPresetChange: (TrainingPreset) -> Unit,
     onClose: () -> Unit,
     legacyAudio: Boolean = false,
-    onUseLegacyAudio: () -> Unit = {}
+    onUseLegacyAudio: () -> Unit = {},
+    onOpenLicenses: () -> Unit = {}
 ) {
     val s = LocalStrings.current
     val context = LocalContext.current
@@ -293,6 +294,9 @@ fun SettingsScreen(
                 }
             }
 
+            TextButton(onClick = onOpenLicenses, modifier = Modifier.fillMaxWidth()) {
+                Text(if (german) "Open-Source-Lizenzen" else "Open-source licenses")
+            }
         }
     }
 

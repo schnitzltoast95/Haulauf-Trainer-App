@@ -1,0 +1,73 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.util.zip.ZipInputStream
+import java.security.MessageDigest
+
+// Release runtime artifacts only: excludes build tooling and test-only dependencies.
+def ossOutput = layout.buildDirectory.dir('generated/ossAssets')
+def thirdParty = rootProject.file('third_party')
+def generateOss = tasks.register('generateOssLicenses') {
+    inputs.files(configurations.named('releaseRuntimeClasspath'))
+    inputs.dir(thirdParty)
+    outputs.dir(ossOutput)
+    doLast {
+        def catalog = new JsonSlurper().parse(new File(thirdParty, 'catalog.json'))
+        def artifacts = configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts
+        def groups = artifacts.groupBy { it.moduleVersion.id.toString() }
+        def missing = groups.keySet() - catalog.keySet()
+        if (missing) throw new GradleException('Missing reviewed OSS metadata: ' + missing.sort().join(', ') + '. See third_party/README.md.')
+        def output = new File(ossOutput.get().asFile, 'oss')
+        output.mkdirs()
+        def texts = [:]
+        def storeText = { String text ->
+            def hash = MessageDigest.getInstance('SHA-256').digest(text.getBytes('UTF-8')).encodeHex().toString()
+            texts[hash] = text
+            hash
+        }
+        def readReviewed = { String name ->
+            def f = new File(thirdParty, name).canonicalFile
+            if (f.parentFile != thirdParty.canonicalFile || !f.isFile() || f.length() == 0) {
+                throw new GradleException('Missing or invalid OSS text: ' + name)
+            }
+            storeText(f.getText('UTF-8'))
+        }
+        def entries = groups.keySet().sort().collect { id ->
+            def meta = catalog[id]
+            if (!meta.name || !(meta.url ==~ /https?:\/\/.+/) || !meta.licenses) {
+                throw new GradleException('Incomplete OSS metadata: ' + id)
+            }
+            def noticeTexts = meta.notices.collect { readReviewed(it) }
+            def scan
+            scan = { InputStream stream ->
+                new ZipInputStream(stream).withCloseable { zip ->
+                    def entry
+                    while ((entry = zip.nextEntry) != null) {
+                        if (entry.directory) continue
+                        def name = entry.name
+                        if (name.toLowerCase() ==~ /.*(^|\/)[^\/]*(license|notice|copyright)[^\/]*/) {
+                            noticeTexts.add(storeText(new String(zip.readAllBytes(), 'UTF-8')))
+                        } else if (name == 'classes.jar' || (name.startsWith('libs/') && name.endsWith('.jar'))) {
+                            scan(new ByteArrayInputStream(zip.readAllBytes()))
+                        }
+                    }
+                }
+            }
+            groups[id].each { artifact ->
+                if (artifact.file.name.endsWith('.jar') || artifact.file.name.endsWith('.aar')) {
+                    artifact.file.withInputStream { scan(it) }
+                }
+            }
+            def licenses = meta.licenses.collect { readReviewed(it) }.unique()
+            [id: id, name: meta.name, version: id.tokenize(':').last(), url: meta.url,
+             licenses: licenses, notices: noticeTexts.unique() - licenses,
+             sources: meta.sources.collect { readReviewed(it) }]
+        }
+        // A single file makes the index and offline texts atomic; no stale text files.
+        new File(output, 'licenses.json').setText(JsonOutput.toJson([libraries: entries, texts: texts]), 'UTF-8')
+        logger.lifecycle('Bundled OSS notices for ' + entries.size() + ' release libraries')
+    }
+}
+android.sourceSets.main.assets.srcDir(ossOutput.get().asFile)
+tasks.configureEach {
+    if (name.matches('merge.*Assets') || name == 'lintVitalAnalyzeRelease') dependsOn(generateOss)
+}
